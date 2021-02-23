@@ -349,7 +349,7 @@ plt.show()
 
 
 
-
+#Tcell = 300 #* K
 Rs = .02 #* ohm #lumped series resistance parameter
 Rsh = 10 #* ohm #shunt resistance
 eta = 0.6
@@ -361,37 +361,11 @@ Absorbed = EInterp
 
 
 
-#Caluclate equilibrium Tcell
-Tcell = 300 #* K
-
-Ui = 8.3 #W/(m**2 *K) 
-Uo = 17 #W/(m**2 *K) 
-
-def Qabs(eta,Absorbed):
-    def LowerB():
-        return E_min
-    def UpperB():
-        return E_max
-    def integrand(E):
-        return eta * Absorbed(E) * SPhotonsPerTEA(E)
-    Qabs = scipy.integrate.dblquad(integrand, E_min, E_max, LowerB(), UpperB())#[0]
-    return Qabs
-
-
-
-def TcellCalc(Ti,To, eta, Absorbed):
-    Tcell = (Qabs(eta,Absorbed)-solar_constant-Ui*Ti-Uo*To)/(Ui+Uo)
-    return Tcell
-
-Tcell = TcellCalc(300,300,0.6,EInterp)
-
-
-theMoops
 
 # Here I input the spectrum of photons absorbed by the absorber material (Absorbed)
 # and the electron-hole pair extraction efficiency (eta). EQE = eta * Absorbed
 
-def RR0(eta,Absorbed):
+def RR0(eta,Absorbed,Tcell =300):
     integrand = lambda E : eta * Absorbed(E) * (E)**2 / (np.exp(E / (kB * Tcell)) - 1)
     integral = scipy.integrate.quad(integrand, E_min, E_max, full_output=1)[0]
     return ((2 * np.pi) / (c0**2 * hPlanck**3)) * integral# / 1.60218e-19 #J/eV
@@ -415,7 +389,40 @@ def Generated(eta,Absorbed):
 #print('RR0 and Gen need to be converted to Amps = C/s')
 
 
-data = pvlib.pvsystem.singlediode(Generated(eta, Absorbed)*q, RR0(eta, Absorbed)*q, Rs, Rsh, n*Ns*kB*Tcell/q, ivcurve_pnts = 500)
+
+
+def Give_Pmp(eta, Absorbed, Rs, Rsh, Tcell = 300, n = 1, Ns = 1):
+    data = pvlib.pvsystem.singlediode(Generated(eta, Absorbed)*q, RR0(eta, Absorbed,Tcell)*q, Rs, Rsh, n*Ns*kB*Tcell/q, ivcurve_pnts = 500)
+    return data['p_mp']
+
+AbsTotal = As.round(8)
+#AbsT = scipy.interpolate.interp1d(lams, AbsByAbsorbers)#, fill_value="extrapolate")
+EAbsTInterp = scipy.interpolate.interp1d(Ephoton, AbsTotal)
+AbsTotal = EAbsTInterp
+
+Ui = 8.3 #W/(m**2 *K) 
+Uo = 17 #W/(m**2 *K) 
+
+def Qabs(eta, AbsTotal):
+    def LowerB():
+        return E_min
+    def UpperB():
+        return E_max
+    def integrand(self,E):
+        return eta * AbsTotal(E) * SPhotonsPerTEA(E)
+    Qabs = scipy.integrate.dblquad(integrand, E_min, E_max, LowerB(), UpperB())[0]
+    return Qabs
+
+#Caluclate equilibrium Tcell
+
+def TcellCalc(Ti,To, eta, Absorbed, AbsTotal, Tcell = 300):
+    Tcell = (Qabs(eta,AbsTotal) - Give_Pmp(eta,Absorbed,Rs,Rsh) + Ui*Ti + Uo*To)/(Ui + Uo)
+    return Tcell
+
+Tcell = TcellCalc(300,300,0.6,EInterp,AbsTotal)
+print('Tcell = ',Tcell)
+
+data = pvlib.pvsystem.singlediode(Generated(eta, Absorbed)*q, RR0(eta, Absorbed, Tcell)*q, Rs, Rsh, n*Ns*kB*Tcell/q, ivcurve_pnts = 500)
 
 Isc = data['i_sc']
 Voc = data['v_oc']
@@ -437,10 +444,10 @@ plt.legend(loc = 'upper right')
 plt.show()
 
 
-def max_efficiency(eta,Absorbed):
-    return Pmp / solar_constant
+def max_efficiency(eta,Absorbed, Tcell = 300):
+    return Give_Pmp(eta, Absorbed, Rs, Rsh, Tcell) / solar_constant
 
-print("PCE =",max_efficiency(0.6,EInterp))
+print("PCE =",max_efficiency(0.6,EInterp, Tcell))
 
 '''
 def GiveIVdata(n,Ns,Tcell,Absorbed):
