@@ -397,8 +397,7 @@ def Give_Pmp(eta, Absorbed, Rs, Rsh, Tcell = 300, n = 1, Ns = 1):
 
 AbsTotal = As.round(8)
 #AbsT = scipy.interpolate.interp1d(lams, AbsByAbsorbers)#, fill_value="extrapolate")
-EAbsTInterp = scipy.interpolate.interp1d(Ephoton, AbsTotal)
-AbsTotal = EAbsTInterp
+AbsTotal = scipy.interpolate.interp1d(Ephoton, AbsTotal)
 
 Ui = 8.3 #W/(m**2 *K) 
 Uo = 17 #W/(m**2 *K) 
@@ -444,10 +443,41 @@ plt.legend(loc = 'upper right')
 plt.show()
 
 
+
+TransTotal = Ts.round(8)
+#AbsT = scipy.interpolate.interp1d(lams, AbsByAbsorbers)#, fill_value="extrapolate")
+TransTotal = scipy.interpolate.interp1d(Ephoton, TransTotal)
+
+def Qtrans(eta, TransTotal):
+    def LowerB():
+        return E_min
+    def UpperB():
+        return E_max
+    def integrand(self,E):
+        return eta * TransTotal(E) * SPhotonsPerTEA(E)
+    Qt = scipy.integrate.dblquad(integrand, E_min, E_max, LowerB(), UpperB())[0]
+    return Qt
+
+
+def SHGC(eta, TransTotal, Ti, To, Rtot):
+    return (Qtrans(eta, TransTotal) + Ui*(Tcell-Ti) - ((To-Ti)/Rtot))/solar_constant
+
+print('SHGC = ',SHGC(0.6, TransTotal, 300, 300, 8))
+
 def max_efficiency(eta,Absorbed, Tcell = 300):
     return Give_Pmp(eta, Absorbed, Rs, Rsh, Tcell) / solar_constant
 
 print("PCE =",max_efficiency(0.6,EInterp, Tcell))
+
+
+
+
+
+
+
+
+
+
 
 '''
 def GiveIVdata(n,Ns,Tcell,Absorbed):
