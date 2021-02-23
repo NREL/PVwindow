@@ -1,0 +1,26 @@
+.. _whatsnew_0210:
+
+v0.2.1 (July 16, 2015)
+-----------------------
+
+This is a minor release from 0.2. It includes a large number of bug fixes
+for the IPython notebook tutorials.
+We recommend that all users upgrade to this version.
+
+Enhancements
+~~~~~~~~~~~~
+
+* Update component info from SAM (csvs dated 2015-6-30) (:issue:`75`)
+
+
+Bug fixes
+~~~~~~~~~
+
+* Fix incorrect call to Perez irradiance function (:issue:`76`)
+* Fix numerous bugs in the IPython notebook tutorials (:issue:`30`)
+
+Contributors
+~~~~~~~~~~~~
+
+* Will Holmgren
+* Jessica Forbess

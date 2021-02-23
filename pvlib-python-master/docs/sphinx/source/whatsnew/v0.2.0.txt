@@ -1,0 +1,51 @@
+.. _whatsnew_0200:
+
+v0.2.0 (July 6, 2015)
+-----------------------
+
+This is a major release from 0.1 and includes a large number of API changes,
+several new features and enhancements along with a number of bug fixes.
+We recommend that all users upgrade to this version.
+
+Due to the large number of API changes, you will probably need to update your
+code.
+
+
+API changes
+~~~~~~~~~~~
+
+* Change variable names to conform with new
+  `Variables and style rules wiki <https://github.com/pvlib/pvlib-python/wiki/Variables-and-style-rules>`_.
+  This impacts many function declarations and return values.
+  Your existing code probably will not work! (:issue:`37`, :issue:`54`).
+* Move ``dirint`` and ``disc`` algorithms from ``clearsky.py``
+  to ``irradiance.py`` (:issue:`42`)
+* Mark some ``pvsystem.py`` methods as private (:issue:`20`)
+* Make output of ``pvsystem.sapm_celltemp`` a DataFrame (:issue:`54`)
+
+Enhancements
+~~~~~~~~~~~~
+
+* Add conda installer
+* PEP8 fixups to solarposition.py and spa.py (:issue:`50`)
+* Add optional ``projection_ratio`` keyword argument to the ``haydavies``
+  calculator. Speeds calculations when irradiance changes but
+  solar position remains the same (:issue:`58`)
+* Improved installation instructions in README.
+
+Bug fixes
+~~~~~~~~~
+
+* fix local build of the documentation (:issue:`49`, :issue:`56`)
+* The release date of 0.1 was fixed in the documentation
+  (see :ref:`whatsnew_0100`)
+* fix casting of DateTimeIndex to int64 epoch timestamp on machines with 32 bit python int (:issue:`63`)
+* fixed some docstrings with failing doctests (:issue:`62`)
+
+Contributors
+~~~~~~~~~~~~
+
+* Will Holmgren
+* Rob Andrews
+* bmu
+* Tony Lorenzo
