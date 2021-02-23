@@ -443,7 +443,7 @@ def Qabs(eta,Absorbed):
         return E_max
     def integrand(E):
         return eta * Absorbed(E) * SPhotonsPerTEA(E)
-    Qabs = scipy.integrate.quad(integrand, E_min, E_max)#, LowerB(), UpperB())#[0]
+    Qabs = scipy.integrate.dblquad(integrand, E_min, E_max, LowerB(), UpperB())#[0]
     return Qabs
 #Qabs(0.6,EInterp)
 
