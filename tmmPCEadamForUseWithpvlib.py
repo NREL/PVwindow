@@ -223,7 +223,6 @@ plt.show()
 
 # Solar cell temperature is 300 kelvin:
 
-Tcell = 300 #* K
 c0 = 299792458 #m/s
 hPlanck = 6.62607015e-34 #J*s   4.135667516e-15 #eV*s               
 kB = 1.380649e-23 #J/K    8.61733034e-5 #eV/K              
@@ -359,12 +358,38 @@ Ns = 1
 q = 1.602176634e-19 #elementary charge C
 Absorbed = EInterp
 #Absorbed = AbsInterp
+
+
+
+#Caluclate equilibrium Tcell
+Tcell = 300 #* K
+
+Ui = 8.3 #W/(m**2 *K) 
+Uo = 17 #W/(m**2 *K) 
+
+def Qabs(eta,Absorbed):
+    def LowerB():
+        return E_min
+    def UpperB():
+        return E_max
+    def integrand(E):
+        return eta * Absorbed(E) * SPhotonsPerTEA(E)
+    Qabs = scipy.integrate.dblquad(integrand, E_min, E_max, LowerB(), UpperB())#[0]
+    return Qabs
+
+
+
+def TcellCalc(Ti,To, eta, Absorbed):
+    Tcell = (Qabs(eta,Absorbed)-solar_constant-Ui*Ti-Uo*To)/(Ui+Uo)
+    return Tcell
+
+Tcell = TcellCalc(300,300,0.6,EInterp)
+
+
+theMoops
+
 # Here I input the spectrum of photons absorbed by the absorber material (Absorbed)
 # and the electron-hole pair extraction efficiency (eta). EQE = eta * Absorbed
-#plt.plot(hPlanck * c0 /EphotonTest * 1e9, Absorbed(hPlanck * c0 / EphotonTest * 1e9))
-#plt.show()
-
-
 
 def RR0(eta,Absorbed):
     integrand = lambda E : eta * Absorbed(E) * (E)**2 / (np.exp(E / (kB * Tcell)) - 1)
@@ -380,8 +405,8 @@ def Generated(eta,Absorbed):
 #units 1/(s*m**2)
 
 
-RR = RR0(eta,Absorbed)
-Gen = Generated(eta,Absorbed)
+#RR = RR0(eta,Absorbed,Tcell)
+#Gen = Generated(eta,Absorbed)
 #print('Gen =', Gen * q,'. Example value is ~2-5')
 #print('Gen =', Gen * q * c0**2 * hPlanck**2 * 1 / (kB**2 * Tcell**2),'. Example value is ~2-5')
 #print('GenDA in photons*C/s =', Gen * q * c0**2 * hPlanck / (kB * Tcell),'. Example value is ~2-5')
@@ -412,6 +437,11 @@ plt.legend(loc = 'upper right')
 plt.show()
 
 
+def max_efficiency(eta,Absorbed):
+    return Pmp / solar_constant
+
+print("PCE =",max_efficiency(0.6,EInterp))
+
 '''
 def GiveIVdata(n,Ns,Tcell,Absorbed):
     data = pvlib.pvsystem.singlediode(Generated(eta, Absorbed)*q, RR0(eta, Absorbed)*q, Rs, Rsh, n*Ns*kB*Tcell/q, ivcurve_pnts = 500)
@@ -436,41 +466,14 @@ def GiveIVdata(n,Ns,Tcell,Absorbed):
 GiveIVdata(1,1,Tcell,EInterp)
 '''
 
-def Qabs(eta,Absorbed):
-    def LowerB():
-        return E_min
-    def UpperB():
-        return E_max
-    def integrand(E):
-        return eta * Absorbed(E) * SPhotonsPerTEA(E)
-    Qabs = scipy.integrate.dblquad(integrand, E_min, E_max, LowerB(), UpperB())#[0]
-    return Qabs
-#Qabs(0.6,EInterp)
-
-integrand = lambda E : eta * Absorbed(E) * SPhotonsPerTEA(E)
-#QabsW = scipy.integrate.dblquad(integrand, E_min, E_max, lambda x :E_min, lambda x : E_max)#[0]
-print(Qabs(0.6,EInterp))
-
-TheMoops
-Ui = 8.3 #W/(m**2 *K) 
-Uo = 17 #W/(m**2 *K) 
-
-def TcellCalc(Ti,To, eta, Absorbed):
-    Tcell = (Qabs(eta,Absorbed)-solar_constant-Ui*Ti-Uo*To)/(Ui+Uo)
-    return Tcell
-
-def max_efficiency(eta,Absorbed):
-    return Pmp / solar_constant
-
-print("PCE =",max_efficiency(0.6,EInterp))
 
 '''
 def Give_PCE(eta,Absorbed, Ti, To, n = 1, Ns = 1):
-    data1 = pvlib.pvsystem.singlediode(Generated(eta, Absorbed)*q, RR0(eta, Absorbed)*q, Rs, Rsh, n*Ns*kB*Tcell/q, ivcurve_pnts = 500)  
-    Pmp = data1['p_mp']
-    TcellNew = TcellCalc(Ti, To, eta, Absorbed)
-    print('Isc = ', Isc, ', Voc = ', Voc, ', Imp = ', Imp, ', Vmp = ', Vmp, ', Pmp =', Pmp)
-    data = pvlib.pvsystem.singlediode(Generated(eta, Absorbed)*q, RR0(eta, Absorbed)*q, Rs, Rsh, n*Ns*kB*TcellNew/q, ivcurve_pnts = 500)  
+    #Tcell = 300
+    #data1 = pvlib.pvsystem.singlediode(Generated(eta, Absorbed)*q, RR0(eta, Absorbed,Tcell)*q, Rs, Rsh, n*Ns*kB*Tcell/q, ivcurve_pnts = 500)  
+    #Pmp = data1['p_mp']
+    #print('Isc = ', Isc, ', Voc = ', Voc, ', Imp = ', Imp, ', Vmp = ', Vmp, ', Pmp =', Pmp)
+    data = pvlib.pvsystem.singlediode(Generated(eta, Absorbed)*q, RR0(eta, Absorbed)*q, Rs, Rsh, n*Ns*kB*Tcell/q, ivcurve_pnts = 500)  
     Isc = data['i_sc']
     Voc = data['v_oc']
     Imp = data['i_mp']
@@ -489,11 +492,10 @@ def Give_PCE(eta,Absorbed, Ti, To, n = 1, Ns = 1):
     plt.ylim(-1, 150)
     plt.legend(loc = 'upper right')
     plt.show()
-    print("PCE =", Pmp/solar_constant)
-    return 
-Give_PCE(0.6,EInterp,300,300)
+    #print("PCE =", Pmp/solar_constant)
+    return Pmp/solar_constant
+print("PCE =", Give_PCE(0.6,EInterp,300,300))
 '''
-
 #def current_density_ideal(voltage, eta,Absorbed):
 #    return e * (Generated(eta,Absorbed) - RR0(eta,Absorbed) * np.exp(e * voltage / (kB * Tcell)))
 #def current_density_ideal(voltage, eta,Absorbed):
