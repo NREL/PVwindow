@@ -73,7 +73,7 @@ import pvlib
 
 from pvlib import pvsystem
 
-
+'''
 # This whole thing uses microns for length
 
 degree = np.pi/180
@@ -108,7 +108,7 @@ EVA = Layer(3000,'nkEVA','i')
 
 # 50% VLT with non-wavelength-selective absorber, MAPbBr3 = 500 nm
 layers = [Glass,FTO,TiO2,MAPBr,NiO,ITO,EVA,Glass,TiO2lowE,Ag,TiO2lowE]
-
+'''
 '''
 Ttests = []
 for lam in lams:
@@ -118,7 +118,7 @@ plt.figure()
 plt.plot(lams,Ttests)
 plt.show()
 '''
-
+'''
 thicks = [tmm.inf]
 iorcs = ['i']
 for layer in layers:
@@ -398,7 +398,7 @@ def Give_PCE():
  
     
  
-    
+'''
  
     
  
@@ -429,7 +429,7 @@ inc_angle = 0.*degree
         
 num_lams = 500
 
-lams = np.linspace(0.3,2.5,num=num_lams) #um
+
 
 Glass = Layer(6000,'nkLowFeGlass','i')
 TiO2 = Layer(0.050,'nkTiO2','c')
@@ -465,8 +465,10 @@ plt.figure()
 plt.plot(lams,Ttests)
 plt.show()
 '''
-def BigoptimizePCE(layers):
+def BigoptimizePCE(thicks):
 
+    lams = np.linspace(0.3,2.5,num=num_lams) #um
+    
     thicks = [tmm.inf]
     iorcs = ['i']
     for layer in layers:
@@ -738,6 +740,8 @@ def VLTconstraint(layers):
     return VLT - 0.5
 
 layers 
+#thicks
+
 
 def PCE():
     return Pmp/solar_constant  
@@ -753,12 +757,9 @@ print(Opti)
  
     
  
-print(PCE())
-   
- 
-    
- 
-    
+#print(PCE())
+
+
  
     
  
