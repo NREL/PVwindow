@@ -389,12 +389,6 @@ def Generated(eta,Absorbed):
 #print('RR0 and Gen need to be converted to Amps = C/s')
 
 
-<<<<<<< Updated upstream
-=======
-<<<<<<< Updated upstream
-data = pvlib.pvsystem.singlediode(Generated(eta, Absorbed)*q, RR0(eta, Absorbed)*q, Rs, Rsh, n*Ns*kB*Tcell/q, ivcurve_pnts = 500)
-=======
->>>>>>> Stashed changes
 
 
 def Give_Pmp(eta, Absorbed, Rs, Rsh, Tcell = 300, n = 1, Ns = 1):
@@ -404,12 +398,7 @@ def Give_Pmp(eta, Absorbed, Rs, Rsh, Tcell = 300, n = 1, Ns = 1):
 AbsTotal = As.round(8)
 #AbsT = scipy.interpolate.interp1d(lams, AbsByAbsorbers)#, fill_value="extrapolate")
 AbsTotal = scipy.interpolate.interp1d(Ephoton, AbsTotal)
-<<<<<<< Updated upstream
 
-=======
-Ti = 300
-To = 300
->>>>>>> Stashed changes
 Ui = 8.3 #W/(m**2 *K) 
 Uo = 17 #W/(m**2 *K) 
 
@@ -425,7 +414,6 @@ def Qabs(eta, AbsTotal):
 
 #Caluclate equilibrium Tcell
 
-<<<<<<< Updated upstream
 def TcellCalc(Ti,To, eta, Absorbed, AbsTotal, Tcell = 300):
     Tcell = (Qabs(eta,AbsTotal) - Give_Pmp(eta,Absorbed,Rs,Rsh) + Ui*Ti + Uo*To)/(Ui + Uo)
     return Tcell
@@ -434,17 +422,6 @@ Tcell = TcellCalc(300,300,0.6,EInterp,AbsTotal)
 print('Tcell = ',Tcell)
 
 data = pvlib.pvsystem.singlediode(Generated(eta, Absorbed)*q, RR0(eta, Absorbed, Tcell)*q, Rs, Rsh, n*Ns*kB*Tcell/q, ivcurve_pnts = 500)
-=======
-def TcellCalc(Ti,To, eta, Absorbed, AbsTotal, Ui, Uo, Tcell = 300):
-    Tcell = (Qabs(eta,AbsTotal) - Give_Pmp(eta,Absorbed,Rs,Rsh) + Ui*Ti + Uo*To)/(Ui + Uo)
-    return Tcell
-
-Tcell = TcellCalc(300,300,0.6,EInterp,AbsTotal,Ui,Uo)
-print('Tcell = ',Tcell)
-
-data = pvlib.pvsystem.singlediode(Generated(eta, Absorbed)*q, RR0(eta, Absorbed, Tcell)*q, Rs, Rsh, n*Ns*kB*Tcell/q, ivcurve_pnts = 500)
->>>>>>> Stashed changes
->>>>>>> Stashed changes
 
 Isc = data['i_sc']
 Voc = data['v_oc']
@@ -467,12 +444,6 @@ plt.show()
 
 
 
-<<<<<<< Updated upstream
-=======
-<<<<<<< Updated upstream
-print("PCE =",max_efficiency(0.6,EInterp))
-=======
->>>>>>> Stashed changes
 TransTotal = Ts.round(8)
 #AbsT = scipy.interpolate.interp1d(lams, AbsByAbsorbers)#, fill_value="extrapolate")
 TransTotal = scipy.interpolate.interp1d(Ephoton, TransTotal)
@@ -487,28 +458,17 @@ def Qtrans(eta, TransTotal):
     Qt = scipy.integrate.dblquad(integrand, E_min, E_max, LowerB(), UpperB())[0]
     return Qt
 
-<<<<<<< Updated upstream
 
 def SHGC(eta, TransTotal, Ti, To, Rtot):
     return (Qtrans(eta, TransTotal) + Ui*(Tcell-Ti) - ((To-Ti)/Rtot))/solar_constant
 
 print('SHGC = ',SHGC(0.6, TransTotal, 300, 300, 8))
-=======
-def SHGC(eta, TransTotal, Ui, Ti, To, Rtot):
-    return (Qtrans(eta, TransTotal) + Ui*(Tcell-Ti) - ((To-Ti)/Rtot))/solar_constant
-
-print('SHGC = ',SHGC(0.6, TransTotal, Ui, 300, 300, 8))
->>>>>>> Stashed changes
 
 def max_efficiency(eta,Absorbed, Tcell = 300):
     return Give_Pmp(eta, Absorbed, Rs, Rsh, Tcell) / solar_constant
 
 print("PCE =",max_efficiency(0.6,EInterp, Tcell))
 
-<<<<<<< Updated upstream
-=======
-#Eventually the max efficiency will need to incorporate the TcellCalc function
->>>>>>> Stashed changes
 
 
 
@@ -517,11 +477,7 @@ print("PCE =",max_efficiency(0.6,EInterp, Tcell))
 
 
 
-<<<<<<< Updated upstream
 
-=======
->>>>>>> Stashed changes
->>>>>>> Stashed changes
 
 '''
 def GiveIVdata(n,Ns,Tcell,Absorbed):
