@@ -142,44 +142,7 @@ def TiO2(Thickness = .05):
     return Layer(Thickness,'nkTiO2','c')
 def FTO(Thickness = .250):
     return Layer(Thickness,'nkFTO','c')
-def MAPI(Thickness):
-    return Layer(0.130,'nkMAPI','c')
-def AZO(Thickness):
-    return Layer(0.200,'nkAZO','c')
-def ITO(Thickness): 
-    return Layer(0.200,'nkITO','c')
-def ITOlowE(Thickness): 
-    return Layer(0.075,'nkITO','c')
-def SnO2(Thickness): 
-    return Layer(0.05,'nkSnO2','c')
-def SnO2lowE(Thickness):
-    return Layer(0.030,'nkSnO2','c')
-def SnO2lowEfat(Thickness): 
-    return Layer(0.050,'nkSnO2','c')
-def SiO2(Thickness): 
-    return Layer(0.024,'nkSiO2','c')
-def NiO(Thickness): 
-    return Layer(0.050,'nkNiO','c')
-def Ag(Thickness): 
-    return Layer(0.015,'nkAg','c')
-def TiO2lowE(Thickness): 
-    return Layer(0.030,'nkTiO2','c')
-def TiO2lowEfat(Thickness): 
-    return Layer(0.060,'nkTiO2','c')
-def Bleach(Thickness): 
-    return Layer(0.370,'nkBleach','c')
-def ClAlPc(Thickness): 
-    return Layer(0.300,'nkClAlPc','c')
-def C60(Thickness): 
-    return Layer(0.200,'nkC60','c')
-def IR(Thickness):
-    return Layer(0.060,'nkPTB7_ThIEICO_4F','c')
-def MAPBr(Thickness): 
-    return Layer(0.500,'nkMAPbBr3','c')
-def EVA(Thickness): 
-    return Layer(3000,'nkEVA','i')
 
-Glass(400)
 
 Thickness = [6000,0.05,0.25]
 def GiveLayers(Thickness,layer1,layer2,layer3):
@@ -253,6 +216,81 @@ plt.plot(lams,Ttests)
 plt.show()
 '''
 
+def Spectra(layers):
+    thicks = [tmm.inf]
+    iorcs = ['i']
+    for layer in layers:
+        thicks.append(layer.d)
+        iorcs.append(layer.i_or_c)
+    thicks.append(tmm.inf)
+    iorcs.append('i')
+    
+    thicks_bw = thicks[::-1]
+    iorcs_bw = iorcs[::-1]
+
+    Ts = []
+    Rfs = []
+    Rbs = []
+    AbsByAbsorbers = []
+#EQEs2 = []
+#IREQEs = []
+
+#layerchoice = 4
+    layerchoice = 4
+    layerchoice2 = 5
+
+    for lam in lams:
+
+        nks = [1]
+        for layer in layers:
+            nks.append(layer.nk(lam))
+            nks.append(1)
+
+        nks_bw = nks[::-1]
+    
+        front_spol = tmm.inc_tmm('s',nks,thicks,iorcs,inc_angle,lam)
+        front_ppol = tmm.inc_tmm('p',nks,thicks,iorcs,inc_angle,lam)
+        back_spol = tmm.inc_tmm('s',nks_bw,thicks_bw,iorcs_bw,inc_angle,lam)
+        back_ppol = tmm.inc_tmm('p',nks_bw,thicks_bw,iorcs_bw,inc_angle,lam)
+    
+        AbsByAbsorber_spol = tmm.inc_absorp_in_each_layer(front_spol)[layerchoice]
+        AbsByAbsorber_ppol = tmm.inc_absorp_in_each_layer(front_ppol)[layerchoice]
+    
+        AbsByAbsorbers.append( (AbsByAbsorber_spol + AbsByAbsorber_ppol) / 2. )
+    
+   # EQE_spol2 = tmm.inc_absorp_in_each_layer(front_spol)[layerchoice2]
+   # EQE_ppol2 = tmm.inc_absorp_in_each_layer(front_ppol)[layerchoice2]
+    
+   # EQEs2.append( (EQE_spol2 + EQE_ppol2) / 2. )
+    
+        Rfs.append( (front_spol['R']+front_ppol['R']) / 2.)
+        Rbs.append( (back_spol['R']+back_ppol['R']) / 2.)
+        Ts.append( (front_spol['T']+front_ppol['T']) / 2. )
+
+
+    Ts = np.array(Ts)
+    Rfs = np.array(Rfs)
+    Rbs = np.array(Rbs)
+    As = 1-Ts-Rfs
+    sanities = Ts+Rfs+As
+
+    AbsByAbsorbers = np.array(AbsByAbsorbers)
+    Spectra = {'AbsByAbsorbers':AbsByAbsorbers, 'Ts':Ts,'Rfs':Rfs,'Rbs':Rbs,'As':As,'Total':sanities}
+    return Spectra
+
+Spectra(layers)
+
+AbsByAbsorbers = Spectra(layers)['AbsbyAbsorbers']
+Ts = Spectra
+Rfs = Spectra
+Rbs = Spectra
+As = Spectra
+sanities = Spectra
+
+
+
+
+'''
 thicks = [tmm.inf]
 iorcs = ['i']
 for layer in layers:
@@ -313,16 +351,16 @@ sanities = Ts+Rfs+As
 AbsByAbsorbers = np.array(AbsByAbsorbers)
 #EQEs2 = np.array(EQEs2)
 #IREQEs=EQEs+EQEs2
-
+'''
 # Here I calculate VLT and spit it out to the screen
-def GiveVLTSpectrum(layers):
+def VLTSpectrum(layers):
     return Stack(layers)
-def GiveVLT(layers):
+def VLT(layers):
     VLTstack=Stack(layers)
     return VLTstack.get_visible_light_transmission(lams,inc_angle)
 #VLTstack=Stack(layers)
 #VLT=VLTstack.get_visible_light_transmission(lams,inc_angle)
-print("VLT =",GiveVLT(layers))
+print("VLT =",VLT(layers))
 #print("VLT =",VLT)
 #
 '''
@@ -360,7 +398,7 @@ plt.plot(lams,AbsByAbsorbers,color='black',linestyle='--',marker=None,label="Abs
 #plt.plot(lams,IREQEs,color='gray',linestyle='--',marker=None,label="EQE")
 plt.plot(lams,sanities,color='gold',marker=None,label="R+A+T")
 # This is the photopic eye response
-plt.plot(lams,GiveVLTSpectrum(layers).cieplf(lams),color='red',marker=None,label="photopic")
+plt.plot(lams,VLTSpectrum(layers).cieplf(lams),color='red',marker=None,label="photopic")
 # This is the solar spectrum
  #plt.plot(lams,VLTstack.Is(lams)/max(VLTstack.Is(lams)),color='gray',marker=None,label="AM1.5")
 plt.xlabel('wavelength, $\mu$m')
@@ -570,7 +608,7 @@ Tcell = TcellCalc(300,300,0.6,Absorbed,AbsTotal)
 print('Tcell = ',Tcell)
 
 data = pvlib.pvsystem.singlediode(Generated(eta, Absorbed)*q, RR0(eta, Absorbed, Tcell)*q, Rs, Rsh, n*Ns*kB*Tcell/q, ivcurve_pnts = 500)
-
+type(data)
 Isc = data['i_sc']
 Voc = data['v_oc']
 Imp = data['i_mp']
@@ -606,7 +644,7 @@ def Give_PCE():
     
 
 
-    
+data
  
     
  

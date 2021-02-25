@@ -185,9 +185,14 @@ AbsByAbsorbers = np.array(AbsByAbsorbers)
 #IREQEs=EQEs+EQEs2
 
 # Here I calculate VLT and spit it out to the screen
-VLTstack=Stack(layers)
-VLT=VLTstack.get_visible_light_transmission(lams,inc_angle)
-print("VLT =",VLT)
+def VLTSpectrum(layers):
+    return Stack(layers)
+def VLT(layers):
+    VLTstack=Stack(layers)
+    return VLTstack.get_visible_light_transmission(lams,inc_angle)
+#VLTstack=Stack(layers)
+#VLT=VLTstack.get_visible_light_transmission(lams,inc_angle)
+print("VLT =",VLT(layers))
 #
 
 X = np.transpose([lams,AbsByAbsorbers])
@@ -210,7 +215,7 @@ plt.plot(lams,AbsByAbsorbers,color='black',linestyle='--',marker=None,label="Abs
 #plt.plot(lams,IREQEs,color='gray',linestyle='--',marker=None,label="EQE")
 plt.plot(lams,sanities,color='gold',marker=None,label="R+A+T")
 # This is the photopic eye response
-plt.plot(lams,VLTstack.cieplf(lams),color='red',marker=None,label="photopic")
+plt.plot(lams,VLTSpectrum(layers).cieplf(lams),color='red',marker=None,label="photopic")
 # This is the solar spectrum
  #plt.plot(lams,VLTstack.Is(lams)/max(VLTstack.Is(lams)),color='gray',marker=None,label="AM1.5")
 plt.xlabel('wavelength, $\mu$m')
@@ -320,13 +325,21 @@ print('Solar constant =',solar_constant) #/ (W/m**2))
 #lams *= 1000 #* nm
 
 # Round AbsByAbsorber to make really small numbers equal to zero
-AbsByAbsorbers = AbsByAbsorbers.round(8)
-AbsInterp = scipy.interpolate.interp1d(lams, AbsByAbsorbers)#, fill_value="extrapolate")
-EInterp = scipy.interpolate.interp1d(Ephoton, AbsByAbsorbers)
+#AbsByAbsorbers = AbsByAbsorbers.round(8)
+#AbsInterp = scipy.interpolate.interp1d(lams, AbsByAbsorbers)#, fill_value="extrapolate")
+#EInterp = scipy.interpolate.interp1d(Ephoton, AbsByAbsorbers)
+
+def GiveAbsInterp(AbsByAbsorbers):
+    Abs = AbsByAbsorbers.round(8)
+    return scipy.interpolate.interp1d(lams, Abs)#, fill_value="extrapolate")
+
+def GiveEInterp(AbsByAbsorbers):
+    AbsByAbsorbers = AbsByAbsorbers.round(8)
+    return scipy.interpolate.interp1d(Ephoton, AbsByAbsorbers)
 
 #λs = np.linspace(λ_min, λ_max, num=500)
 #Abs_values = np.array([AbsInterp(x) for x in λs])
-Abs_values = np.array([AbsInterp(x) for x in lams])
+Abs_values = np.array([GiveAbsInterp(AbsByAbsorbers)(x) for x in lams])
 plt.figure()
 #plt.plot(λs, Abs_values )
 plt.plot(lams , Abs_values )
@@ -356,7 +369,7 @@ eta = 0.6
 n = 1
 Ns = 1
 q = 1.602176634e-19 #elementary charge C
-Absorbed = EInterp
+Absorbed = GiveEInterp(AbsByAbsorbers)
 #Absorbed = AbsInterp
 
 
@@ -401,12 +414,16 @@ To = 300
 Ui = 8.3 #W/(m**2 *K) 
 Uo = 17 #W/(m**2 *K) 
 
-
-AbsTotal = As.round(8)
-AbsTotal = scipy.interpolate.interp1d(Ephoton, AbsTotal)
+def GiveEInterpCurve(Parameter):
+    Curve = Parameter.round(8)
+    return scipy.interpolate.interp1d(Ephoton, Curve)
+#AbsTotal = GiveInterpCurve(As)
+#AbsTotal = As.round(8)
+#AbsTotal = scipy.interpolate.interp1d(Ephoton, AbsTotal)
 
 #Calculate equilibrium Tcell
-def TcellCalc(Ti,To, eta, Absorbed, AbsTotal):
+def TcellCalc(TotalAbs, Ti,To, eta, Absorbed):
+    AbsTotal = GiveEInterpCurve(TotalAbs)
     def Qabs(eta, AbsTotal):
         def LowerB():
             return E_min
@@ -421,13 +438,11 @@ def TcellCalc(Ti,To, eta, Absorbed, AbsTotal):
 #TrueTempMaybe = ImplicitTcellCalc(Ti,To,eta,Absorbed,AbsTotal)
 #print('True temp =',TrueTempMaybe)
 
-
-
 #def TcellCalc(Ti,To, eta, Absorbed, AbsTotal, Tcell):
 #    Temp = (Qabs(eta,AbsTotal) - Give_Pmp(eta,Absorbed,Rs,Rsh, Tcell) + Ui*Ti + Uo*To)/(Ui + Uo)
 #    return Temp
 
-Tcell = TcellCalc(Ti,To,eta,EInterp,AbsTotal)
+Tcell = TcellCalc(As,Ti,To,eta,Absorbed)
 print('Tcell = ',Tcell)
 
 
@@ -445,7 +460,7 @@ print('Isc = ', Isc, ', Voc = ', Voc, ', Imp = ', Imp, ', Vmp = ', Vmp, ', Pmp =
 plt.figure()
 plt.plot(Vvalues,Ivalues, label = 'IV')
 plt.xlabel('Voltage, (V)')
-plt.ylabel('Current (A)')
+plt.ylabel('Current (A) or Power (W/m^2)')
 P_values = np.array([Ivalues * Vvalues])
 plt.plot(Vvalues , P_values.T, label = 'Power')
 plt.ylim(-1, 150)
@@ -454,11 +469,13 @@ plt.show()
 
 
 
-TransTotal = Ts.round(8)
-TransTotal = scipy.interpolate.interp1d(Ephoton, TransTotal)
+#TransTotal = Ts.round(8)
+#TransTotal = scipy.interpolate.interp1d(Ephoton, TransTotal)
 
 
-def SHGC(eta, TransTotal, Ti, To, Rtot):
+def SHGC(eta, Ts, Ti, To, Rtot):
+    #Tcell = TcellCalc(As,Ti,To,eta,Absorbed)
+    TransTotal = GiveEInterpCurve(Ts)
     def Qtrans(eta, TransTotal):
         def LowerB():
             return E_min
@@ -469,12 +486,13 @@ def SHGC(eta, TransTotal, Ti, To, Rtot):
         return scipy.integrate.dblquad(integrand, E_min, E_max, LowerB(), UpperB())[0]
     return (Qtrans(eta, TransTotal) + Ui*(Tcell-Ti) - ((To-Ti)/Rtot))/solar_constant
 
-print('SHGC = ',SHGC(eta, TransTotal, Ti, To, 8))
+print('SHGC = ',SHGC(eta, Ts, Ti, To, 8))
 
-def max_efficiency(eta,Absorbed, Tcell):
+def max_efficiency(eta,Absorbed):
+    #Tcell = TcellCalc(As,Ti,To,eta,Absorbed)
     return Give_Pmp(eta, Absorbed, Rs, Rsh, Tcell) / solar_constant
 
-print("PCE =",max_efficiency(eta,EInterp, Tcell))
+print("PCE =",max_efficiency(eta,Absorbed))
 
 
 
