@@ -365,7 +365,7 @@ print('Exponent Factor = ', (e * (1 * V  + current_density_ideal(1*V, 0.6, EInte
                             # e is in coulombs. This equation^^ results in C*V/(*J) = J/J 
 #RR0test = RR0(0.6, AbsInterp)
 #print('RR0test =', RR0test / (1/(s*m**2)))
-current = 4 * (A/(m**2))
+#current = 4 * (A/(m**2))
 
 #print('I = ', current/(A/(m**2)))
 print('Shunt resistance factor = ', ((1*V*(1/m**2)  + (current_density(1 * V, 0.6, EInterp)) * Rs)/Rsh) / (A/m**2))
