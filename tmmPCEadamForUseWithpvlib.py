@@ -365,7 +365,7 @@ Absorbed = EInterp
 # Here I input the spectrum of photons absorbed by the absorber material (Absorbed)
 # and the electron-hole pair extraction efficiency (eta). EQE = eta * Absorbed
 
-def RR0(eta,Absorbed,Tcell =300):
+def RR0(eta,Absorbed,Tcell):
     integrand = lambda E : eta * Absorbed(E) * (E)**2 / (np.exp(E / (kB * Tcell)) - 1)
     integral = scipy.integrate.quad(integrand, E_min, E_max, full_output=1)[0]
     return ((2 * np.pi) / (c0**2 * hPlanck**3)) * integral# / 1.60218e-19 #J/eV
@@ -391,35 +391,45 @@ def Generated(eta,Absorbed):
 
 
 
-def Give_Pmp(eta, Absorbed, Rs, Rsh, Tcell = 300, n = 1, Ns = 1):
+def Give_Pmp(eta, Absorbed, Rs, Rsh, Tcell, n = 1, Ns = 1):
     data = pvlib.pvsystem.singlediode(Generated(eta, Absorbed)*q, RR0(eta, Absorbed,Tcell)*q, Rs, Rsh, n*Ns*kB*Tcell/q, ivcurve_pnts = 500)
     return data['p_mp']
 
-AbsTotal = As.round(8)
-#AbsT = scipy.interpolate.interp1d(lams, AbsByAbsorbers)#, fill_value="extrapolate")
-AbsTotal = scipy.interpolate.interp1d(Ephoton, AbsTotal)
 
+Ti = 300
+To = 300
 Ui = 8.3 #W/(m**2 *K) 
 Uo = 17 #W/(m**2 *K) 
 
-def Qabs(eta, AbsTotal):
-    def LowerB():
-        return E_min
-    def UpperB():
-        return E_max
-    def integrand(self,E):
-        return eta * AbsTotal(E) * SPhotonsPerTEA(E)
-    Qabs = scipy.integrate.dblquad(integrand, E_min, E_max, LowerB(), UpperB())[0]
-    return Qabs
 
-#Caluclate equilibrium Tcell
+AbsTotal = As.round(8)
+AbsTotal = scipy.interpolate.interp1d(Ephoton, AbsTotal)
 
-def TcellCalc(Ti,To, eta, Absorbed, AbsTotal, Tcell = 300):
-    Tcell = (Qabs(eta,AbsTotal) - Give_Pmp(eta,Absorbed,Rs,Rsh) + Ui*Ti + Uo*To)/(Ui + Uo)
-    return Tcell
+#Calculate equilibrium Tcell
+def TcellCalc(Ti,To, eta, Absorbed, AbsTotal):
+    def Qabs(eta, AbsTotal):
+        def LowerB():
+            return E_min
+        def UpperB():
+            return E_max
+        def integrand(self,E):
+            return eta * AbsTotal(E) * SPhotonsPerTEA(E)
+        return scipy.integrate.dblquad(integrand, E_min, E_max, LowerB(), UpperB())[0]        
+    Temp = lambda Tcell: (Qabs(eta,AbsTotal) - Give_Pmp(eta,Absorbed,Rs,Rsh, Tcell) + Ui*Ti + Uo*To)/(Ui + Uo)-Tcell
+    return scipy.optimize.fsolve(Temp, 300)[0]
 
-Tcell = TcellCalc(300,300,0.6,EInterp,AbsTotal)
+#TrueTempMaybe = ImplicitTcellCalc(Ti,To,eta,Absorbed,AbsTotal)
+#print('True temp =',TrueTempMaybe)
+
+
+
+#def TcellCalc(Ti,To, eta, Absorbed, AbsTotal, Tcell):
+#    Temp = (Qabs(eta,AbsTotal) - Give_Pmp(eta,Absorbed,Rs,Rsh, Tcell) + Ui*Ti + Uo*To)/(Ui + Uo)
+#    return Temp
+
+Tcell = TcellCalc(Ti,To,eta,EInterp,AbsTotal)
 print('Tcell = ',Tcell)
+
 
 data = pvlib.pvsystem.singlediode(Generated(eta, Absorbed)*q, RR0(eta, Absorbed, Tcell)*q, Rs, Rsh, n*Ns*kB*Tcell/q, ivcurve_pnts = 500)
 
@@ -445,29 +455,26 @@ plt.show()
 
 
 TransTotal = Ts.round(8)
-#AbsT = scipy.interpolate.interp1d(lams, AbsByAbsorbers)#, fill_value="extrapolate")
 TransTotal = scipy.interpolate.interp1d(Ephoton, TransTotal)
-
-def Qtrans(eta, TransTotal):
-    def LowerB():
-        return E_min
-    def UpperB():
-        return E_max
-    def integrand(self,E):
-        return eta * TransTotal(E) * SPhotonsPerTEA(E)
-    Qt = scipy.integrate.dblquad(integrand, E_min, E_max, LowerB(), UpperB())[0]
-    return Qt
 
 
 def SHGC(eta, TransTotal, Ti, To, Rtot):
+    def Qtrans(eta, TransTotal):
+        def LowerB():
+            return E_min
+        def UpperB():
+            return E_max
+        def integrand(self,E):
+            return eta * TransTotal(E) * SPhotonsPerTEA(E)
+        return scipy.integrate.dblquad(integrand, E_min, E_max, LowerB(), UpperB())[0]
     return (Qtrans(eta, TransTotal) + Ui*(Tcell-Ti) - ((To-Ti)/Rtot))/solar_constant
 
-print('SHGC = ',SHGC(0.6, TransTotal, 300, 300, 8))
+print('SHGC = ',SHGC(eta, TransTotal, Ti, To, 8))
 
-def max_efficiency(eta,Absorbed, Tcell = 300):
+def max_efficiency(eta,Absorbed, Tcell):
     return Give_Pmp(eta, Absorbed, Rs, Rsh, Tcell) / solar_constant
 
-print("PCE =",max_efficiency(0.6,EInterp, Tcell))
+print("PCE =",max_efficiency(eta,EInterp, Tcell))
 
 
 
