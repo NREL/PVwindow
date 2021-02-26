@@ -244,10 +244,10 @@ def Spectra(layers):
         nks = [1]
         for layer in layers:
             nks.append(layer.nk(lam))
-            nks.append(1)
-
+        nks.append(1)
+        
         nks_bw = nks[::-1]
-    
+        
         front_spol = tmm.inc_tmm('s',nks,thicks,iorcs,inc_angle,lam)
         front_ppol = tmm.inc_tmm('p',nks,thicks,iorcs,inc_angle,lam)
         back_spol = tmm.inc_tmm('s',nks_bw,thicks_bw,iorcs_bw,inc_angle,lam)
@@ -278,15 +278,14 @@ def Spectra(layers):
     Spectra = {'AbsByAbsorbers':AbsByAbsorbers, 'Ts':Ts,'Rfs':Rfs,'Rbs':Rbs,'As':As,'Total':sanities}
     return Spectra
 
-Spectra(layers)
+#Spectra(layers)
 
-AbsByAbsorbers = Spectra(layers)['AbsbyAbsorbers']
-Ts = Spectra
-Rfs = Spectra
-Rbs = Spectra
-As = Spectra
-sanities = Spectra
-
+AbsByAbsorbers = Spectra(layers)['AbsByAbsorbers']
+Ts = Spectra(layers)['Ts']
+Rfs = Spectra(layers)['Rfs']
+Rbs = Spectra(layers)['Rbs']
+As = Spectra(layers)['As']
+sanities = Spectra(layers)['Total']
 
 
 
@@ -341,7 +340,9 @@ for lam in lams:
     Rbs.append( (back_spol['R']+back_ppol['R']) / 2.)
     Ts.append( (front_spol['T']+front_ppol['T']) / 2. )
 
-
+print(nks)
+print(thicks)
+print(iorcs)
 Ts = np.array(Ts)
 Rfs = np.array(Rfs)
 Rbs = np.array(Rbs)
@@ -349,6 +350,8 @@ As = 1-Ts-Rfs
 sanities = Ts+Rfs+As
 
 AbsByAbsorbers = np.array(AbsByAbsorbers)
+
+
 #EQEs2 = np.array(EQEs2)
 #IREQEs=EQEs+EQEs2
 '''
@@ -363,6 +366,7 @@ def VLT(layers):
 print("VLT =",VLT(layers))
 #print("VLT =",VLT)
 #
+
 '''
 def VLTconstraint(layers):
     VLTstack=Stack(layers)
