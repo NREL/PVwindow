@@ -90,7 +90,7 @@ def EVA(Thickness = 3000):
 
 
 
-GlassBound = (6000,6000)
+GlassBound = (5999,6001)
 TiO2Bound = (0.025,.1)
 FTOBound = (0.1,0.5)
 MAPIBound = (.06,.260)
@@ -110,7 +110,7 @@ ClAlPcBound = (.150, .600)
 C60Bound = (.100,.400)
 IRBound = (.030, .12)
 MAPBrBound = (.250,1)
-EVABound = (3000,3000)
+EVABound = (2999,3001)
 
 #Thickness = [6000,0.05,0.25]
 LayersMaterials = [Glass,FTO,TiO2]
@@ -135,7 +135,7 @@ def GiveBounds(LayersMaterials):
 
 Bounded = GiveBounds(LayersMaterials)
 print(Bounded)
-
+print('GlassBound')
 
 '''
 def GiveLayers(Thickness,layer1,layer2 = None ,layer3 = None):
@@ -606,10 +606,9 @@ def VLTconstraint(Thickness):
     VLTstack=Stack(layers)
     VLT=VLTstack.get_visible_light_transmission(lams,inc_angle)
     return VLT - 0.5
-def FTOconstraint(layers):
-    return layers[1]-.15
+
 VLTc = {'type': 'eq', 'func': VLTconstraint}
-FTOc = {'type': 'ineq', 'func': FTOconstraint}
+
 
 
 
@@ -623,12 +622,15 @@ def MediumOptimize(Thickness):
 def dotheoptimize(Thickness):
     #layerss = GiveLayers(Thicknesses, Glass,FTO,TiO2)
     func_to_minimize = lambda x : -MediumOptimize(x)
-    return scipy.optimize.minimize(func_to_minimize, Thickness,bounds = GiveBounds(LayersMaterials)) #((5999,6001),(.02,.1),(.15,.5),(.2,1),(.02,.07),(.1,.4)))#, constraints = (VLTc))
+    return scipy.optimize.minimize(func_to_minimize, Thickness,bounds = ((5999,6001),(.02,.1),(.15,.5)))#,(.2,1),(.02,.07),(.1,.4)))#, constraints = (VLTc))
 
-Thickness = [6000,.05,.25,0.5,.050, 0.2]
-#LayersMaterials = [Glass, FTO,TiO2]
-LayersMaterials = [Glass, FTO,TiO2,MAPBr, NiO, ITO]
+                                   
+Thickness = [6000,.05,.25]
+#Thickness = [6000,.05,.25,0.5,.050, 0.2]
+LayersMaterials = [Glass, FTO,TiO2]
+#LayersMaterials = [Glass, FTO,TiO2,MAPBr, NiO, ITO]
 #LayersMaterials = [Glass,FTO,TiO2,MAPBr,NiO,ITO,EVA,Glass,TiO2lowE,Ag,TiO2lowE]
+Boundeds = GiveBounds(LayersMaterials)
 print('Sim PCE for Optimization =',MediumOptimize(Thickness))
 WERT = dotheoptimize(Thickness)
 print(WERT)
