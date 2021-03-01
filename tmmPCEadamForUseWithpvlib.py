@@ -37,27 +37,112 @@ num_lams = 500
 
 lams = np.linspace(0.3,2.5,num=num_lams) #um
 
-Glass = Layer(6000,'nkLowFeGlass','i')
-TiO2 = Layer(0.050,'nkTiO2','c')
-FTO = Layer(0.250,'nkFTO','c')
-MAPI = Layer(0.130,'nkMAPI','c')
-AZO = Layer(0.200,'nkAZO','c')
-ITO = Layer(0.200,'nkITO','c')
-ITOlowE = Layer(0.075,'nkITO','c')
-SnO2 = Layer(0.05,'nkSnO2','c')
-SnO2lowE = Layer(0.030,'nkSnO2','c')
-SnO2lowEfat = Layer(0.050,'nkSnO2','c')
-SiO2 = Layer(0.024,'nkSiO2','c')
-NiO = Layer(0.050,'nkNiO','c')
-Ag = Layer(0.015,'nkAg','c')
-TiO2lowE = Layer(0.030,'nkTiO2','c')
-TiO2lowEfat = Layer(0.060,'nkTiO2','c')
-Bleach = Layer(0.370,'nkBleach','c')
-ClAlPc = Layer(0.300,'nkClAlPc','c')
-C60 = Layer(0.200,'nkC60','c')
-IR = Layer(0.060,'nkPTB7_ThIEICO_4F','c')
-MAPBr = Layer(0.500,'nkMAPbBr3','c')
-EVA = Layer(3000,'nkEVA','i')
+
+
+def Glass(Thickness = 6000):
+    return Layer(Thickness,'nkLowFeGlass','i')
+#def Glass(Thickness = 6000):
+ #   return Layer(Thickness,'nkLowFeGlass','i')
+def TiO2(Thickness = 0.050):
+    return Layer(Thickness,'nkTiO2','c')
+def FTO(Thickness = 0.250):
+    return Layer(Thickness,'nkFTO','c')
+
+#Glass = Layer(6000,'nkLowFeGlass','i')
+#TiO2 = Layer(0.050,'nkTiO2','c')
+#FTO = Layer(0.250,'nkFTO','c')
+def MAPI(Thickness = 0.130): 
+    return Layer(Thickness,'nkMAPI','c')
+def AZO(Thickness = 0.200):
+    return Layer(Thickness,'nkAZO','c')
+def ITO(Thickness = 0.200):
+    return Layer(Thickness,'nkITO','c')
+def ITOlowE(Thickness = 0.075):
+    return Layer(Thickness,'nkITO','c')
+def SnO2(Thickness = 0.05):
+    return Layer(Thickness,'nkSnO2','c')
+def SnO2lowE(Thickness = 0.030):
+    return Layer(Thickness,'nkSnO2','c')
+def SnO2lowEfat(Thickness = 0.050):
+    return Layer(Thickness,'nkSnO2','c')
+def SiO2(Thickness = 0.024):
+    return Layer(Thickness,'nkSiO2','c')
+def NiO(Thickness = 0.050):
+    return Layer(Thickness,'nkNiO','c')
+def Ag(Thickness = 0.015):
+    return Layer(Thickness,'nkAg','c')
+def TiO2lowE(Thickness = 0.030):
+    return Layer(Thickness,'nkTiO2','c')
+def TiO2lowEfat(Thickness = 0.060):
+    return Layer(Thickness,'nkTiO2','c')
+def Bleach(Thickness = 0.370):
+    return Layer(Thickness,'nkBleach','c')
+def ClAlPc(Thickness = 0.300):
+    return Layer(Thickness,'nkClAlPc','c')
+def C60(Thickness = 0.200):
+    return Layer(Thickness,'nkC60','c')
+def IR(Thickness = 0.060):
+    return Layer(Thickness,'nkPTB7_ThIEICO_4F','c')
+def MAPBr(Thickness = 0.500):
+    return Layer(Thickness,'nkMAPbBr3','c')
+def EVA(Thickness = 3000):
+    return Layer(Thickness,'nkEVA','i')
+
+
+
+GlassBound = (6000,6000)
+TiO2Bound = (0.025,.1)
+FTOBound = (0.1,0.5)
+MAPIBound = (.06,.260)
+AZOBound = (.1,.4)
+ITOBound = (.1,.4)
+ITOlowEBound = (0.03,.15)
+SnO2Bound = (.025,.1)
+SnO2lowEBound = (.015,.06)
+SnO2lowEfatBoun = (0.025,.1)
+SiO2Bound = (.012,.05)
+NiOBound = (.025,.1)
+AgBound = (.007, .03)
+TiO2lowEBound = (.015, .06)
+TiO2lowEfatBound = (.03,.12)
+BleachBound = (.180, .500)
+ClAlPcBound = (.150, .600)
+C60Bound = (.100,.400)
+IRBound = (.030, .12)
+MAPBrBound = (.250,1)
+EVABound = (3000,3000)
+
+#Thickness = [6000,0.05,0.25]
+LayersMaterials = [Glass,FTO,TiO2]
+
+def GiveLayers(Thickness,LayersMaterials):
+    x = len(LayersMaterials)
+    if x == len(Thickness):
+        Layers = []
+        for i in range(x):
+            Layers.append(LayersMaterials[i](Thickness[i]))
+        return Layers
+    else:  
+        return print('Error, Number of layers and Thickness values do not match')
+#GiveLayers(Thickness, LayersMaterials)
+
+def GiveBounds(LayersMaterials):
+    x = len(LayersMaterials)
+    Bounds = []
+    for i in range(x):
+        Bounds.append(LayersMaterials[i].__name__ + 'Bound')
+    return Bounds
+
+Bounded = GiveBounds(LayersMaterials)
+print(Bounded)
+
+
+'''
+def GiveLayers(Thickness,layer1,layer2 = None ,layer3 = None):
+    return [layer1(Thickness[0]),layer2(Thickness[1]),layer3(Thickness[2])]
+'''
+
+#layers = GiveLayers(Thickness, Glass,FTO,TiO2)
 
 #MAPI.plotnk(lams)
 #Glass.plotnk(lams)
@@ -82,7 +167,7 @@ EVA = Layer(3000,'nkEVA','i')
 #layers = [Glass,FTO,TiO2,C60,ClAlPc,NiO,ITO,EVA,Glass,TiO2lowE,Ag,TiO2lowE]
 
 # 50% VLT with non-wavelength-selective absorber, MAPbBr3 = 500 nm
-layers = [Glass,FTO,TiO2,MAPBr,NiO,ITO,EVA,Glass,TiO2lowE,Ag,TiO2lowE]
+layers = [Glass(),FTO(),TiO2(),MAPBr(),NiO(),ITO(),EVA(),Glass(),TiO2lowE(),Ag(),TiO2lowE()]
 
 # Different thicknesses of MAPI: 50% VLT = 40 nm, 25% VLT = 130 nm, 5% VLT = 370 nm, 0.5% VLT = 775 nm
 #layers = [Glass,FTO,TiO2,MAPI,NiO,ITO,EVA,Glass,TiO2lowE,Ag,TiO2lowE]
@@ -123,66 +208,81 @@ plt.plot(lams,Ttests)
 plt.show()
 '''
 
-thicks = [tmm.inf]
-iorcs = ['i']
-for layer in layers:
-    thicks.append(layer.d)
-    iorcs.append(layer.i_or_c)
-thicks.append(tmm.inf)
-iorcs.append('i')
+#Calculates Spectra Based on the layers of the cell
+def Spectra(layers):
+    thicks = [tmm.inf]
+    iorcs = ['i']
+    for layer in layers:
+        thicks.append(layer.d)
+        iorcs.append(layer.i_or_c)
+    thicks.append(tmm.inf)
+    iorcs.append('i')
+    
+    thicks_bw = thicks[::-1]
+    iorcs_bw = iorcs[::-1]
 
-thicks_bw = thicks[::-1]
-iorcs_bw = iorcs[::-1]
-
-Ts = []
-Rfs = []
-Rbs = []
-AbsByAbsorbers = []
+    Ts = []
+    Rfs = []
+    Rbs = []
+    AbsByAbsorbers = []
 #EQEs2 = []
 #IREQEs = []
 
 #layerchoice = 4
-layerchoice = 4
-layerchoice2 = 5
+    layerchoice = 4
+    layerchoice2 = 5
 
-for lam in lams:
+    for lam in lams:
 
-    nks = [1]
-    for layer in layers:
-        nks.append(layer.nk(lam))
-    nks.append(1)
-
-    nks_bw = nks[::-1]
+        nks = [1]
+        for layer in layers:
+            nks.append(layer.nk(lam))
+        nks.append(1)
+        
+        nks_bw = nks[::-1]
+        
+        front_spol = tmm.inc_tmm('s',nks,thicks,iorcs,inc_angle,lam)
+        front_ppol = tmm.inc_tmm('p',nks,thicks,iorcs,inc_angle,lam)
+        back_spol = tmm.inc_tmm('s',nks_bw,thicks_bw,iorcs_bw,inc_angle,lam)
+        back_ppol = tmm.inc_tmm('p',nks_bw,thicks_bw,iorcs_bw,inc_angle,lam)
     
-    front_spol = tmm.inc_tmm('s',nks,thicks,iorcs,inc_angle,lam)
-    front_ppol = tmm.inc_tmm('p',nks,thicks,iorcs,inc_angle,lam)
-    back_spol = tmm.inc_tmm('s',nks_bw,thicks_bw,iorcs_bw,inc_angle,lam)
-    back_ppol = tmm.inc_tmm('p',nks_bw,thicks_bw,iorcs_bw,inc_angle,lam)
+        AbsByAbsorber_spol = tmm.inc_absorp_in_each_layer(front_spol)[layerchoice]
+        AbsByAbsorber_ppol = tmm.inc_absorp_in_each_layer(front_ppol)[layerchoice]
     
-    AbsByAbsorber_spol = tmm.inc_absorp_in_each_layer(front_spol)[layerchoice]
-    AbsByAbsorber_ppol = tmm.inc_absorp_in_each_layer(front_ppol)[layerchoice]
-    
-    AbsByAbsorbers.append( (AbsByAbsorber_spol + AbsByAbsorber_ppol) / 2. )
+        AbsByAbsorbers.append( (AbsByAbsorber_spol + AbsByAbsorber_ppol) / 2. )
     
    # EQE_spol2 = tmm.inc_absorp_in_each_layer(front_spol)[layerchoice2]
    # EQE_ppol2 = tmm.inc_absorp_in_each_layer(front_ppol)[layerchoice2]
     
    # EQEs2.append( (EQE_spol2 + EQE_ppol2) / 2. )
     
-    Rfs.append( (front_spol['R']+front_ppol['R']) / 2.)
-    Rbs.append( (back_spol['R']+back_ppol['R']) / 2.)
-    Ts.append( (front_spol['T']+front_ppol['T']) / 2. )
+        Rfs.append( (front_spol['R']+front_ppol['R']) / 2.)
+        Rbs.append( (back_spol['R']+back_ppol['R']) / 2.)
+        Ts.append( (front_spol['T']+front_ppol['T']) / 2. )
 
 
-Ts = np.array(Ts)
-Rfs = np.array(Rfs)
-Rbs = np.array(Rbs)
-As = 1-Ts-Rfs
-sanities = Ts+Rfs+As
+    Ts = np.array(Ts)
+    Rfs = np.array(Rfs)
+    Rbs = np.array(Rbs)
+    As = 1-Ts-Rfs
+    sanities = Ts+Rfs+As
 
-AbsByAbsorbers = np.array(AbsByAbsorbers)
-#EQEs2 = np.array(EQEs2)
-#IREQEs=EQEs+EQEs2
+    AbsByAbsorbers = np.array(AbsByAbsorbers)
+    Spectra = {'AbsByAbsorbers':AbsByAbsorbers, 'Ts':Ts,'Rfs':Rfs,'Rbs':Rbs,'As':As,'Total':sanities}
+    return Spectra
+
+spectra = Spectra(layers)
+
+
+
+AbsByAbsorbers = spectra['AbsByAbsorbers']
+Ts = spectra['Ts']
+Rfs = spectra['Rfs']
+Rbs = spectra['Rbs']
+As = spectra['As']
+sanities = spectra['Total']
+
+
 
 # Here I calculate VLT and spit it out to the screen
 def VLTSpectrum(layers):
@@ -232,7 +332,11 @@ c0 = 299792458 #m/s
 hPlanck = 6.62607015e-34 #J*s   4.135667516e-15 #eV*s               
 kB = 1.380649e-23 #J/K    8.61733034e-5 #eV/K              
 # Tack on units
-lams *= 1000 #* nm
+#lams *= 1000 #* nm
+#++++++++++This line is breaking the calculation of absorbed later on++++++++++++#####
+
+
+
 
 worksheet = pandas.read_excel('https://www.nrel.gov/grid/solar-resource/assets/data/astmg173.xls')
 #worksheet = pandas.read_excel('/Users/lwheeler/Code/pv-window-bem/Data/astmg173.xls')
@@ -255,7 +359,7 @@ AM15[:,1] #*= W / m**2 / nm
 #λ_max = 2500 #* nm
 #λ_min = 280 * nm
 #λ_max = 4000 * nm
-Ephoton = hPlanck * c0 / lams *1e9 #J
+Ephoton = hPlanck * c0 / lams *1e6 #J
 E_min = min(Ephoton) #J   energy units from hPlanck
 E_max = max(Ephoton) #J   energy units from hPlanck
 #E_min = hPlanck * c0 / λ_max * 1e9 #J   energy units from hPlanck
@@ -277,7 +381,7 @@ plt.show()
 
 # Interpolate to get a continuous function which I will be able to do integrals on:
 
-AM15interp = scipy.interpolate.interp1d(AM15[:,0], AM15[:,1])#, fill_value="extrapolate")
+AM15interp = scipy.interpolate.interp1d(AM15[:,0]/1000, AM15[:,1])#, fill_value="extrapolate")
 #This requires nm scale 300-2500
 
 # Here’s the plot, it looks correct:
@@ -297,15 +401,11 @@ plt.show()
 
 
 def SPhotonsPerTEA(Ephoton):
-    λ = hPlanck * c0 / Ephoton *1e9  #nm
+    λ = hPlanck * c0 / Ephoton *1e6  #nm
     return AM15interp(λ) * (1 / Ephoton) * (hPlanck * c0 / Ephoton**2) * 1e9
     #units photons/m^2       *    1/J       *    J*s   * m/s   /   J^2 idk
     #Units = should be photons/(s*m^2)
     #Ephoton must convert to 300-2500 nm from J
-
-#SPTest = SPhotonsPerTEA(EphotonTest)
-#print('SPTest =', SPTest)
-
 
 
 PowerPerTEA = lambda E : E * SPhotonsPerTEA(E)
@@ -329,17 +429,20 @@ print('Solar constant =',solar_constant) #/ (W/m**2))
 #AbsInterp = scipy.interpolate.interp1d(lams, AbsByAbsorbers)#, fill_value="extrapolate")
 #EInterp = scipy.interpolate.interp1d(Ephoton, AbsByAbsorbers)
 
-def GiveAbsInterp(AbsByAbsorbers):
-    Abs = AbsByAbsorbers.round(8)
-    return scipy.interpolate.interp1d(lams, Abs)#, fill_value="extrapolate")
+def GivelamsInterp(Parameter):
+    Curve = Parameter.round(8)
+    return scipy.interpolate.interp1d(lams, Curve)#, fill_value="extrapolate")
 
-def GiveEInterp(AbsByAbsorbers):
-    AbsByAbsorbers = AbsByAbsorbers.round(8)
-    return scipy.interpolate.interp1d(Ephoton, AbsByAbsorbers)
+#def GiveEInterp(AbsByAbsorbers):
+ #   AbsByAbsorbers = AbsByAbsorbers.round(8)
+  #  return scipy.interpolate.interp1d(Ephoton, AbsByAbsorbers)
+def GiveEInterp(Parameter):
+    Curve = Parameter.round(8)
+    return scipy.interpolate.interp1d(Ephoton, Curve)
 
 #λs = np.linspace(λ_min, λ_max, num=500)
 #Abs_values = np.array([AbsInterp(x) for x in λs])
-Abs_values = np.array([GiveAbsInterp(AbsByAbsorbers)(x) for x in lams])
+Abs_values = np.array([GivelamsInterp(AbsByAbsorbers)(x) for x in lams])
 plt.figure()
 #plt.plot(λs, Abs_values )
 plt.plot(lams , Abs_values )
@@ -363,16 +466,18 @@ plt.show()
 
 
 #Tcell = 300 #* K
-Rs = .02 #* ohm #lumped series resistance parameter
+Rs = .02 #* ohm #series resistance
 Rsh = 10 #* ohm #shunt resistance
 eta = 0.6
 n = 1
 Ns = 1
 q = 1.602176634e-19 #elementary charge C
-Absorbed = GiveEInterp(AbsByAbsorbers)
+
+Absorbed = GiveEInterp(Spectra(layers)['AbsByAbsorbers'])
+#Absorbed = GiveAbsInterp(Spectra(layers)['AbsByAbsorbers'])
+
+#Absorbed = GiveEInterp(spectra['AbsByAbsorbers'])
 #Absorbed = AbsInterp
-
-
 
 
 # Here I input the spectrum of photons absorbed by the absorber material (Absorbed)
@@ -414,16 +519,14 @@ To = 300
 Ui = 8.3 #W/(m**2 *K) 
 Uo = 17 #W/(m**2 *K) 
 
-def GiveEInterpCurve(Parameter):
-    Curve = Parameter.round(8)
-    return scipy.interpolate.interp1d(Ephoton, Curve)
+
 #AbsTotal = GiveInterpCurve(As)
 #AbsTotal = As.round(8)
 #AbsTotal = scipy.interpolate.interp1d(Ephoton, AbsTotal)
 
 #Calculate equilibrium Tcell
 def TcellCalc(TotalAbs, Ti,To, eta, Absorbed):
-    AbsTotal = GiveEInterpCurve(TotalAbs)
+    AbsTotal = GiveEInterp(TotalAbs)
     def Qabs(eta, AbsTotal):
         def LowerB():
             return E_min
@@ -469,13 +572,11 @@ plt.show()
 
 
 
-#TransTotal = Ts.round(8)
-#TransTotal = scipy.interpolate.interp1d(Ephoton, TransTotal)
 
 
-def SHGC(eta, Ts, Ti, To, Rtot):
+def SHGC(eta, Ts, Ti, To, Rtot, Tcell):
     #Tcell = TcellCalc(As,Ti,To,eta,Absorbed)
-    TransTotal = GiveEInterpCurve(Ts)
+    TransTotal = GiveEInterp(Ts)
     def Qtrans(eta, TransTotal):
         def LowerB():
             return E_min
@@ -486,22 +587,97 @@ def SHGC(eta, Ts, Ti, To, Rtot):
         return scipy.integrate.dblquad(integrand, E_min, E_max, LowerB(), UpperB())[0]
     return (Qtrans(eta, TransTotal) + Ui*(Tcell-Ti) - ((To-Ti)/Rtot))/solar_constant
 
-print('SHGC = ',SHGC(eta, Ts, Ti, To, 8))
 
-def max_efficiency(eta,Absorbed):
+
+
+def max_efficiency(eta,Absorbed,Tcell):
     #Tcell = TcellCalc(As,Ti,To,eta,Absorbed)
     return Give_Pmp(eta, Absorbed, Rs, Rsh, Tcell) / solar_constant
-
-print("PCE =",max_efficiency(eta,Absorbed))
-
-
-
+#these are termination points in the chain of functions
+print('SHGC = ',SHGC(eta, Ts, Ti, To, 8, Tcell))
+print("PCE =",max_efficiency(eta,Absorbed,Tcell))
 
 
+#+++++++++Start optimization parts+++++++++++++++++++++++#
+
+
+def VLTconstraint(Thickness):
+    layers = GiveLayers(Thickness, LayersMaterials)
+    VLTstack=Stack(layers)
+    VLT=VLTstack.get_visible_light_transmission(lams,inc_angle)
+    return VLT - 0.5
+def FTOconstraint(layers):
+    return layers[1]-.15
+VLTc = {'type': 'eq', 'func': VLTconstraint}
+FTOc = {'type': 'ineq', 'func': FTOconstraint}
 
 
 
 
+def MediumOptimize(Thickness):
+    layerss = GiveLayers(Thickness, LayersMaterials)
+    Abbsorbed = GiveEInterp(Spectra(layerss)['AbsByAbsorbers'])
+    Tcell = TcellCalc(Spectra(layerss)['As'],Ti,To,eta,Abbsorbed)
+    return max_efficiency(eta,Abbsorbed,Tcell)
+
+def dotheoptimize(Thickness):
+    #layerss = GiveLayers(Thicknesses, Glass,FTO,TiO2)
+    func_to_minimize = lambda x : -MediumOptimize(x)
+    return scipy.optimize.minimize(func_to_minimize, Thickness,bounds = GiveBounds(LayersMaterials)) #((5999,6001),(.02,.1),(.15,.5),(.2,1),(.02,.07),(.1,.4)))#, constraints = (VLTc))
+
+Thickness = [6000,.05,.25,0.5,.050, 0.2]
+#LayersMaterials = [Glass, FTO,TiO2]
+LayersMaterials = [Glass, FTO,TiO2,MAPBr, NiO, ITO]
+#LayersMaterials = [Glass,FTO,TiO2,MAPBr,NiO,ITO,EVA,Glass,TiO2lowE,Ag,TiO2lowE]
+print('Sim PCE for Optimization =',MediumOptimize(Thickness))
+WERT = dotheoptimize(Thickness)
+print(WERT)
+#print(WERT['x'])
+
+#With 6 layers, dotheoptimize took 57 minutes to complete.No constraint on VLT
+
+
+#Tried to plot the effect of FTO vs TiO2.
+#MediumOptimize doesn't work if 2 layers or less
+
+
+
+'''
+#LayersMaterials = [FTO,TiO2]
+x = np.linspace(.02, 1,num =100)
+y = np.linspace(.2, 1,num =100)
+xgrid, ygrid = np.meshgrid(x, y)
+xy = np.stack([xgrid, ygrid])
+layerss = [FTO(x),TiO2(y)]
+Abbsorbed = GiveEInterp(Spectra(layerss)['AbsByAbsorbers'])
+TcellA = TcellCalc(Spectra(layerss)['As'],Ti,To,eta,Abbsorbed)
+Function = max_efficiency(eta,Abbsorbed,TcellA)
+
+#def function(x):
+# return np.sin(x[0])*x[1]**2
+
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+ax.view_init(38, -30)
+ax.plot_surface(xgrid, ygrid, Function, cmap='terrain')
+ax.set_xlabel('FTO Thick')
+ax.set_ylabel('TiO2 Thick')
+ax.set_zlabel('PCE(x, y)')
+plt.show()
+'''
+
+
+#Fix this to combine mediumoptimize and dotheoptimize with inputs thicknesses and layersmaterials
+def CompleteOptimize(Thicknesses, LayersMaterials):
+    LayersMaterials = LayersMaterials
+    def OptimizeThis(Thicknesses):
+        layerss = GiveLayers(Thicknesses, LayersMaterials) 
+        Abbsorbed = GiveEInterp(Spectra(layerss)['AbsByAbsorbers'])
+        return max_efficiency(eta,Abbsorbed)
+    def OptimizationStep(Thicknesses):
+        func_to_minimize = lambda x : -OptimizeThis(x)
+        return scipy.optimize.minimize(func_to_minimize, Thicknesses)
+    return OptimizationStep(Thicknesses)['x']
 
 
 '''

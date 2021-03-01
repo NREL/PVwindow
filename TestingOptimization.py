@@ -133,8 +133,6 @@ num_lams = 500
 
 lams = np.linspace(0.3,2.5,num=num_lams) #um
 
-Tio2Thick = 0.050
-FTOThick = 0.250
 
 def Glass(Thickness = 6000):
     return Layer(Thickness,'nkLowFeGlass','i')
@@ -144,77 +142,15 @@ def FTO(Thickness = .250):
     return Layer(Thickness,'nkFTO','c')
 
 
-Thickness = [6000,0.05,0.25]
+Thickness = [6000,0.25,0.25]
 def GiveLayers(Thickness,layer1,layer2,layer3):
     return [layer1(Thickness[0]),layer2(Thickness[1]),layer3(Thickness[2])]
 
-    
-#MAPI.plotnk(lams)
-#Glass.plotnk(lams)
-
-#Triple silver low-E
-#layers = [Glass,SnO2lowE,Ag,SnO2lowEfat,Ag,SnO2lowEfat,Ag,SnO2lowE]
-
-#Double silver low-E (45,15,90,15,45)
-#layers = [Glass,SnO2lowE,Ag,SnO2lowEfat,Ag,SnO2lowE]
-
-#Double silver low-E (30,15,60,15,30)
-#layers = [Glass,TiO2lowE,Ag,TiO2lowEfat,Ag,TiO2lowE]
-
-#Single silver (30,15,30)
-#layers = [Glass,TiO2lowE,Ag,TiO2lowE]
-
-#Solar cell + Low-E on surface 4
-
-# 50% VLT with wavelength-selective absorber, IR = 60 nm
-#layers = [Glass,FTO,TiO2,IR,NiO,ITO,EVA,Glass,TiO2lowE,Ag,TiO2lowE]
-# 50% VLT with wavelength-selective absorber, C60 = 100 nm, ClAlPc = 200 nm
-#layers = [Glass,FTO,TiO2,C60,ClAlPc,NiO,ITO,EVA,Glass,TiO2lowE,Ag,TiO2lowE]
-
-# 50% VLT with non-wavelength-selective absorber, MAPbBr3 = 500 nm
-
-#layers = [Glass,FTO,TiO2,MAPBr,NiO,ITO,EVA,Glass,TiO2lowE,Ag,TiO2lowE]
 
 layers = GiveLayers(Thickness, Glass,FTO,TiO2)
 
-# Different thicknesses of MAPI: 50% VLT = 40 nm, 25% VLT = 130 nm, 5% VLT = 370 nm, 0.5% VLT = 775 nm
-#layers = [Glass,FTO,TiO2,MAPI,NiO,ITO,EVA,Glass,TiO2lowE,Ag,TiO2lowE]
-# Here's the corresponding bleached layers for 5 and 0.5%
-#layers = [Glass,FTO,TiO2,Bleach,NiO,ITO,EVA,Glass,TiO2lowE,Ag,TiO2lowE]
 
-# Different thicknesses of bleach: 5% VLT = 370 nm, 0.5% VLT = 775 nm
-#layers = [Glass,FTO,TiO2,Bleach,NiO,ITO,EVA,Glass,TiO2lowE,Ag,TiO2lowE]
 
-#layers = [Glass,FTO,TiO2,MAPI,NiO,ITO,EVA,Glass,TiO2lowE,Ag,TiO2lowE,Ag,TiO2lowE,Ag,TiO2lowE]
-#layers = [Glass,FTO,TiO2,MAPI,NiO,AZO,EVA,Glass,SnO2lowE,Ag,SnO2lowEfat,Ag,SnO2lowEfat,Ag,SnO2lowE]
-#layers = [Glass,FTO,TiO2,Bleach,NiO,AZO,EVA,Glass,SnO2lowE,Ag,SnO2lowEfat,Ag,SnO2lowE]
-#Single silver (30,15,30)
-#layers = [Glass,FTO,TiO2,FTO,MAPI,NiO,ITO,EVA,Glass,TiO2lowE,Ag,TiO2lowE]
-#Double silver low-E (30,15,60,15,30)
-#layers = [Glass,FTO,TiO2,Bleach,NiO,ITO,EVA,Glass,TiO2lowE,Ag,TiO2lowEfat,Ag,TiO2lowE]
-
-#Solar cell + Low-E on surface 2
-
-#layers = [Glass,FTO,TiO2,MAPI,NiO,ITO,EVA,TiO2lowE,Ag,TiO2lowE,Glass]
-#layers = [Glass,TiO2lowE,Ag,TiO2lowE,Ag,TiO2lowE,Ag,TiO2lowE,EVA,Glass,ITO,NiO,MAPI,TiO2,FTO,Glass]
-#layers = [Glass,TiO2lowE,Ag,TiO2lowE,Ag,TiO2lowE,EVA,Glass,ITO,NiO,Bleach,TiO2,FTO,Glass]          
-
-#Tandem transparent solar cells
-#layers = [Glass,ClAlPc,EVA,Glass]
-#layers = [Glass,FTO,SnO2,IR,NiO,ITO,EVA,Glass]
-#layers = [Glass,FTO,SnO2,IR,NiO,ITO,EVA,ITO,SnO2,MAPI,NiO,FTO,Glass]
-#layers = [Glass,FTO,SnO2,IR,NiO,ITO,EVA,ITO,SnO2,Bleach,NiO,FTO,Glass]
-#layers = [Glass,FTO,SnO2,IR,NiO,ITO,EVA,Glass]
-
-'''
-Ttests = []
-for lam in lams:
-    Ttests.append(np.exp(-4*np.pi*MAPI.k(lam)/lam*MAPI.d))
-
-plt.figure()
-plt.plot(lams,Ttests)
-plt.show()
-'''
 
 def Spectra(layers):
     thicks = [tmm.inf]
@@ -278,14 +214,14 @@ def Spectra(layers):
     Spectra = {'AbsByAbsorbers':AbsByAbsorbers, 'Ts':Ts,'Rfs':Rfs,'Rbs':Rbs,'As':As,'Total':sanities}
     return Spectra
 
-#Spectra(layers)
+spectra = Spectra(layers)
 
-AbsByAbsorbers = Spectra(layers)['AbsByAbsorbers']
-Ts = Spectra(layers)['Ts']
-Rfs = Spectra(layers)['Rfs']
-Rbs = Spectra(layers)['Rbs']
-As = Spectra(layers)['As']
-sanities = Spectra(layers)['Total']
+AbsByAbsorbers = spectra['AbsByAbsorbers']
+Ts = spectra['Ts']
+Rfs = spectra['Rfs']
+Rbs = spectra['Rbs']
+As = spectra['As']
+sanities = spectra['Total']
 
 
 
@@ -545,11 +481,16 @@ eta = 0.6
 n = 1
 Ns = 1
 q = 1.602176634e-19 #elementary charge C
+#def GiveAbsorbed(layers):
+   # spectra = Spectra(layers)
+  #  Abs = spectra['AbsByAbsorbers']
+ #   return GiveEInterp(Abs)
+#Absorbed = GiveAbsorbed(layers)
 Absorbed = GiveEInterp(AbsByAbsorbers)
+#Absorbed = GiveEInterp(spectra['AbsByAbsorbers'])
+#Absorbed = GiveEInterp(Spectra(layers)['AbsByAbsorbers'])
 #Absorbed = EInterp
 #Absorbed = AbsInterp
-
-
 
 
 # Here I input the spectrum of photons absorbed by the absorber material (Absorbed)
