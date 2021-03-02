@@ -117,7 +117,7 @@ def GiveLayers(Thickness,LayersMaterials):
             Layers.append(LayersMaterials[i](Thickness[i]))
         return Layers
     else:  
-        return print('Error, Number of layers and Thickness values do not match')
+        raise ValueError ('layers and Thickness lengths do not match')
 #GiveLayers(Thickness, LayersMaterials)
 
 def GiveBounds(LayersMaterials):
@@ -228,7 +228,7 @@ def Spectra(layers):
 #IREQEs = []
 
 #layerchoice = 4
-    layerchoice = 4
+    layerchoice = 1#4 #Need to change this to sepcify the photoactive layer each time
     layerchoice2 = 5
 
     for lam in lams:
@@ -620,7 +620,8 @@ def MediumOptimize(Thickness):
 def dotheoptimize(Thickness):
     #layerss = GiveLayers(Thicknesses, Glass,FTO,TiO2)
     func_to_minimize = lambda x : -MediumOptimize(x)
-    return scipy.optimize.minimize(func_to_minimize, Thickness,bounds = (.02,.1))#((5999,6001),(.02,.1),(.15,.5),(.2,1),(.02,.07),(.1,.4)))#, constraints = (VLTc))
+    return scipy.optimize.minimize(func_to_minimize, Thickness,bounds = (.02,.1))
+#((5999,6001),(.02,.1),(.15,.5),(.2,1),(.02,.07),(.1,.4)))#, constraints = (VLTc))
 
                                    
 #Thickness = [6000,.05,.25]
