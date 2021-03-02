@@ -131,11 +131,16 @@ def GiveBounds(LayersMaterials):
     Bounds = []
     for i in range(x):
         Bounds.append(LayersMaterials[i].__name__ + 'Bound')
+    #Bounds = [i.replace("'", "") for i in Bounds]
     return Bounds
 
 Bounded = GiveBounds(LayersMaterials)
-print(Bounded)
-print('GlassBound')
+#print(Bounded)
+#type(Bounded)
+#print('GlassBound')
+#dert = [GlassBound,FTOBound,TiO2Bound]
+#print(dert)
+
 
 '''
 def GiveLayers(Thickness,layer1,layer2 = None ,layer3 = None):
@@ -600,13 +605,12 @@ print("PCE =",max_efficiency(eta,Absorbed,Tcell))
 
 #+++++++++Start optimization parts+++++++++++++++++++++++#
 
-
+#Constraint on VLT
 def VLTconstraint(Thickness):
     layers = GiveLayers(Thickness, LayersMaterials)
     VLTstack=Stack(layers)
     VLT=VLTstack.get_visible_light_transmission(lams,inc_angle)
     return VLT - 0.5
-
 VLTc = {'type': 'eq', 'func': VLTconstraint}
 
 
@@ -622,38 +626,54 @@ def MediumOptimize(Thickness):
 def dotheoptimize(Thickness):
     #layerss = GiveLayers(Thicknesses, Glass,FTO,TiO2)
     func_to_minimize = lambda x : -MediumOptimize(x)
-    return scipy.optimize.minimize(func_to_minimize, Thickness,bounds = ((5999,6001),(.02,.1),(.15,.5)))#,(.2,1),(.02,.07),(.1,.4)))#, constraints = (VLTc))
+    return scipy.optimize.minimize(func_to_minimize, Thickness,bounds = (.02,.1))#((5999,6001),(.02,.1),(.15,.5),(.2,1),(.02,.07),(.1,.4)))#, constraints = (VLTc))
 
                                    
-Thickness = [6000,.05,.25]
+#Thickness = [6000,.05,.25]
 #Thickness = [6000,.05,.25,0.5,.050, 0.2]
-LayersMaterials = [Glass, FTO,TiO2]
+#Thickness = [6000,.03,.3,0.5,.069, 0.39]
+Thickness = [0.05]
+
+LayersMaterials = [FTO]
+#LayersMaterials = [Glass, FTO,TiO2]
 #LayersMaterials = [Glass, FTO,TiO2,MAPBr, NiO, ITO]
 #LayersMaterials = [Glass,FTO,TiO2,MAPBr,NiO,ITO,EVA,Glass,TiO2lowE,Ag,TiO2lowE]
-Boundeds = GiveBounds(LayersMaterials)
+Bounds = GiveBounds(LayersMaterials)
 print('Sim PCE for Optimization =',MediumOptimize(Thickness))
 WERT = dotheoptimize(Thickness)
 print(WERT)
 #print(WERT['x'])
 
 #With 6 layers, dotheoptimize took 57 minutes to complete.No constraint on VLT
-
+#With 6 layers and tighter bounds, only took 18 minutes. No constraint on VLT.  x: array([6.00000000e+03, 5.19785253e-02, 1.88190522e-01, 6.92350335e-01,5.89070162e-02, 1.15748085e-01])
+#With 6 layers after changing starting values took 23:40. No constraint on VLT x: array([6.00000000e+03, 4.99533492e-02, 2.97889624e-01, 5.04817002e-01,6.91214981e-02, 3.89139617e-01])
 
 #Tried to plot the effect of FTO vs TiO2.
 #MediumOptimize doesn't work if 2 layers or less
 
 
 
+
 '''
+Thickness = np.linspace(.02, 1,num =100)
+layers1 = [FTO]
+Absorbed1 = GiveEInterp(Spectra(layers1)['AbsByAbsorbers'])
+Tcell1 = TcellCalc(Spectra(layers1)['As'],Ti,To,eta,Absorbed1)
+Function1 = max_efficiency(eta,Absorbed1,Tcell1)
+
+
+
+moopsbrgd
+
 #LayersMaterials = [FTO,TiO2]
 x = np.linspace(.02, 1,num =100)
 y = np.linspace(.2, 1,num =100)
 xgrid, ygrid = np.meshgrid(x, y)
 xy = np.stack([xgrid, ygrid])
-layerss = [FTO(x),TiO2(y)]
-Abbsorbed = GiveEInterp(Spectra(layerss)['AbsByAbsorbers'])
-TcellA = TcellCalc(Spectra(layerss)['As'],Ti,To,eta,Abbsorbed)
-Function = max_efficiency(eta,Abbsorbed,TcellA)
+layers2 = [FTO(x),TiO2(y)]
+Absorbed2 = GiveEInterp(Spectra(layers2)['AbsByAbsorbers'])
+Tcell2 = TcellCalc(Spectra(layers2)['As'],Ti,To,eta,Absorbed2)
+Function2 = max_efficiency(eta,Absorbed2,Tcell2)
 
 #def function(x):
 # return np.sin(x[0])*x[1]**2
@@ -661,7 +681,7 @@ Function = max_efficiency(eta,Abbsorbed,TcellA)
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
 ax.view_init(38, -30)
-ax.plot_surface(xgrid, ygrid, Function, cmap='terrain')
+ax.plot_surface(xgrid, ygrid, Function2, cmap='terrain')
 ax.set_xlabel('FTO Thick')
 ax.set_ylabel('TiO2 Thick')
 ax.set_zlabel('PCE(x, y)')
