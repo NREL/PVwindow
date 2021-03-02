@@ -303,10 +303,6 @@ def Generated(eta,Absorbed):
 #    integral = scipy.integrate.quad(integrand, E_min, E_max, full_output=1)[0]
     return scipy.integrate.quad(integrand, E_min, E_max, full_output=1)[0]
 
-print('Gen = ', Generated(0.6, AbsInterp)/ (1/(s*m**2)))
-print('Gen*e = ', Generated(0.6, AbsInterp)*e / (A/m**2))
-print('RR0 = ', RR0(0.6,AbsInterp)/ (1/(s*m**2)))
-print('RR0*e = ', RR0(0.6,AbsInterp)*e / (A/m**2))
 def current_density(voltage, eta,Absorbed):
     return e * (Generated(eta,Absorbed) - RR0(eta,Absorbed) * np.exp(e * voltage / (kB * Tcell)))
 
