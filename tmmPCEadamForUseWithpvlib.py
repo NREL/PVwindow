@@ -41,16 +41,10 @@ lams = np.linspace(0.3,2.5,num=num_lams) #um
 
 def Glass(Thickness = 6000):
     return Layer(Thickness,'nkLowFeGlass','i')
-#def Glass(Thickness = 6000):
- #   return Layer(Thickness,'nkLowFeGlass','i')
 def TiO2(Thickness = 0.050):
     return Layer(Thickness,'nkTiO2','c')
 def FTO(Thickness = 0.250):
     return Layer(Thickness,'nkFTO','c')
-
-#Glass = Layer(6000,'nkLowFeGlass','i')
-#TiO2 = Layer(0.050,'nkTiO2','c')
-#FTO = Layer(0.250,'nkFTO','c')
 def MAPI(Thickness = 0.130): 
     return Layer(Thickness,'nkMAPI','c')
 def AZO(Thickness = 0.200):
