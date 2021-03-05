@@ -64,8 +64,6 @@ EVA = Layer(3000,'nkEVA','i')
 # 50% VLT with wavelength-selective absorber, IR = 60 nm
 #layers = [Glass,FTO,TiO2,IR,NiO,ITO,EVA,Glass,TiO2lowE,Ag,TiO2lowE]
 # 50% VLT with wavelength-selective absorber, C60 = 100 nm, ClAlPc = 200 nm
-
-#defines order of layered materials
 layers = [Glass,FTO,TiO2,C60,ClAlPc,NiO,ITO,EVA,Glass,TiO2lowE,Ag,TiO2lowE]
 
 

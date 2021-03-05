@@ -21,6 +21,8 @@ assert sys.version_info >= (3,6), 'Requires Python 3.6+'
 import pvlib
 
 from pvlib import pvsystem
+from colorpy import plots, ciexyz, colormodels #need to install colorpy to call all packages at once
+import PVColor as pvc
 
 
 
@@ -113,7 +115,7 @@ len(Thickness) == len(LayersMaterials)
 '''
 
 #Thickness = [6000,0.05,0.25]
-LayersMaterials = [Glass,FTO,TiO2]
+#LayersMaterials = [Glass,FTO,TiO2]
 
 def GiveLayers(Thickness,LayersMaterials):
     x = len(LayersMaterials)
@@ -124,7 +126,7 @@ def GiveLayers(Thickness,LayersMaterials):
         return Layers
     else:  
         raise ValueError ('layers and Thickness lengths do not match')
-#GiveLayers(Thickness, LayersMaterials)
+
 
 def GiveBounds(LayersMaterials):
     x = len(LayersMaterials)
@@ -134,18 +136,8 @@ def GiveBounds(LayersMaterials):
     #Bounds = [i.replace("'", "") for i in Bounds]
     return Bounds
 
-Bounded = GiveBounds(LayersMaterials)
-#print(Bounded)
-#type(Bounded)
-#print('GlassBound')
-#dert = [GlassBound,FTOBound,TiO2Bound]
-#print(dert)
 
 
-'''
-def GiveLayers(Thickness,layer1,layer2 = None ,layer3 = None):
-    return [layer1(Thickness[0]),layer2(Thickness[1]),layer3(Thickness[2])]
-'''
 
 #layers = GiveLayers(Thickness, Glass,FTO,TiO2)
 
@@ -172,7 +164,11 @@ def GiveLayers(Thickness,layer1,layer2 = None ,layer3 = None):
 #layers = [Glass,FTO,TiO2,C60,ClAlPc,NiO,ITO,EVA,Glass,TiO2lowE,Ag,TiO2lowE]
 
 # 50% VLT with non-wavelength-selective absorber, MAPbBr3 = 500 nm
-layers = [Glass(),FTO(),TiO2(),MAPBr(),NiO(),ITO(),EVA(),Glass(),TiO2lowE(),Ag(),TiO2lowE()]
+#layers = [Glass(),FTO(),TiO2(),MAPBr(),NiO(),ITO(),EVA(),Glass(),TiO2lowE(),Ag(),TiO2lowE()]
+
+
+layers = [Glass(),FTO(),TiO2(),MAPI(),NiO(),ITO(),EVA(),Glass(),TiO2lowE(),Ag(),TiO2lowE()]
+
 
 # Different thicknesses of MAPI: 50% VLT = 40 nm, 25% VLT = 130 nm, 5% VLT = 370 nm, 0.5% VLT = 775 nm
 #layers = [Glass,FTO,TiO2,MAPI,NiO,ITO,EVA,Glass,TiO2lowE,Ag,TiO2lowE]
@@ -230,12 +226,12 @@ def Spectra(layers, AbsorberLayer):
     Rfs = []
     Rbs = []
     AbsByAbsorbers = []
-#EQEs2 = []
-#IREQEs = []
+    #EQEs2 = []
+    #IREQEs = []
 
-#layerchoice = 4
-    layerchoice = AbsorberLayer # 4 #Need to change this to sepcify the photoactive layer each time
-    layerchoice2 = 5
+
+    layerchoice = AbsorberLayer 
+    #layerchoice2 = 5
 
     for lam in lams:
 
@@ -256,10 +252,10 @@ def Spectra(layers, AbsorberLayer):
     
         AbsByAbsorbers.append( (AbsByAbsorber_spol + AbsByAbsorber_ppol) / 2. )
     
-   # EQE_spol2 = tmm.inc_absorp_in_each_layer(front_spol)[layerchoice2]
-   # EQE_ppol2 = tmm.inc_absorp_in_each_layer(front_ppol)[layerchoice2]
+        # EQE_spol2 = tmm.inc_absorp_in_each_layer(front_spol)[layerchoice2]
+        # EQE_ppol2 = tmm.inc_absorp_in_each_layer(front_ppol)[layerchoice2]
     
-   # EQEs2.append( (EQE_spol2 + EQE_ppol2) / 2. )
+        # EQEs2.append( (EQE_spol2 + EQE_ppol2) / 2. )
     
         Rfs.append( (front_spol['R']+front_ppol['R']) / 2.)
         Rbs.append( (back_spol['R']+back_ppol['R']) / 2.)
@@ -279,13 +275,22 @@ def Spectra(layers, AbsorberLayer):
 spectra = Spectra(layers,4)
 
 
-
 AbsByAbsorbers = spectra['AbsByAbsorbers']
 Ts = spectra['Ts']
 Rfs = spectra['Rfs']
 Rbs = spectra['Rbs']
 As = spectra['As']
 sanities = spectra['Total']
+
+lamsnm = np.array(lams)
+lamsnm*=1000
+spectrumT = np.vstack((lamsnm, Ts)).T
+spectrumRf = np.vstack((lamsnm, Rfs)).T
+plots.spectrum_plot (spectrumRf, 'Rf', 'Rf_Color', 'Wavelength ($nm$)', 'Intensity')
+plt.show()
+plots.spectrum_plot (spectrumT, 'T', 'T_Color', 'Wavelength ($nm$)', 'Intensity')
+plt.show()
+pvc.plot_xy_on_fin(spectrumT, spectrumRf)
 
 
 
@@ -406,11 +411,11 @@ plt.show()
 
 
 def SPhotonsPerTEA(Ephoton):
-    λ = hPlanck * c0 / Ephoton *1e6  #nm
+    λ = hPlanck * c0 / Ephoton *1e6  #um
     return AM15interp(λ) * (1 / Ephoton) * (hPlanck * c0 / Ephoton**2) * 1e9
     #units photons/m^2       *    1/J       *    J*s   * m/s   /   J^2 idk
     #Units = should be photons/(s*m^2)
-    #Ephoton must convert to 300-2500 nm from J
+    #Ephoton must convert to 0.3-2.5 nm from J
 
 
 PowerPerTEA = lambda E : E * SPhotonsPerTEA(E)
@@ -613,7 +618,7 @@ def VLTconstraint(Thickness):
     return VLT - 0.5
 VLTc = {'type': 'eq', 'func': VLTconstraint}
 
-
+type(VLTconstraint)
 
 
 
@@ -630,18 +635,19 @@ def dotheoptimize(Thickness):
     func_to_minimize = lambda x : -MediumOptimize(x)
     #bnd = scipy.optimize.Bounds(.02, .1, keep_feasible=False)#If testing a single layer use this line
     #return scipy.optimize.minimize(func_to_minimize, Thickness,method='SLSQP',bounds = bnd )
-    return scipy.optimize.minimize(func_to_minimize, Thickness,method='SLSQP', bounds = (GlassBound,FTOBound))#,TiO2Bound,MAPBrBound,NiOBound,ITOBound,EVABound,GlassBound,TiO2lowEBound,AgBound,TiO2lowEBound))#, constraints = (VLTc))
+    return scipy.optimize.minimize(func_to_minimize, Thickness,method='SLSQP', bounds = (GlassBound,FTOBound,TiO2Bound,MAPBrBound,NiOBound,ITOBound,EVABound,GlassBound,TiO2lowEBound,AgBound,TiO2lowEBound))#, constraints = (VLTc))
 
                                    
 #Thickness = [6000,.05,.25, 0.5]
 #Thickness = [6000,.050,.25,0.8,.050, 0.2]
 #Thickness = [6000,.03,.3,0.5,.069, 0.39]
 #Thickness = [0.02]
-Thickness = (6000,.250)#,0.050,0.500,0.050,0.200,3000,6000,0.030,0.015,0.030)
+#[Glass,FTO,TiO2,C60,ClAlPc,NiO,ITO,EVA,Glass,TiO2lowE,Ag,TiO2lowE]
+Thickness = (6000,.250,0.050,0.500,0.050,0.200,3000,6000,0.030,0.015,0.030)
 #LayersMaterials = [FTO]
 #LayersMaterials = [Glass, FTO,TiO2, MAPBr]
 #LayersMaterials = [Glass, FTO,TiO2,MAPBr, NiO, ITO]
-LayersMaterials = [Glass,FTO]#,TiO2,MAPBr,NiO,ITO,EVA,Glass,TiO2lowE,Ag,TiO2lowE]
+LayersMaterials = [Glass,FTO,TiO2,MAPBr,NiO,ITO,EVA,Glass,TiO2lowE,Ag,TiO2lowE]
 #Bounds = GiveBounds(LayersMaterials)
 print('Sim PCE for Optimization =',MediumOptimize(Thickness))
 WERT = dotheoptimize(Thickness)
@@ -656,12 +662,15 @@ print('VLT = ',VLTconstraint(WERT['x'])+.5)
 #Adding decimal places changes the result. 6 layers yadda yadda 11:35 x: array([6.00000000e+03, 4.98528198e-02, 2.61261043e-01, 5.88426467e-01,6.27028296e-02, 1.00000000e-01]
 #With 6 layers after changing starting values +better calcs took 17:24. No constraint on VLT x: array([6.00000000e+03, 4.99533492e-02, 2.97889624e-01, 5.04817002e-01,6.91214981e-02, 3.89139617e-01])
 #With 4 layers and reducing number of caluclations took 6 minutes. No Constraint.
-#With all 11 layers took ~30 minutes. x: array([6.00000000e+03, 1.63842049e-01, 2.50000000e-02, 6.41565714e-01, 7.06368506e-02, 1.76317816e-01, 3.00000000e+03, 6.00000000e+03,4.93834317e-02, 1.49000000e-02, 4.69851778e-02])
+#With all 11 layers took ~30 minutes.PCE = 0.04282822642972328,nfev: 157, x: array([6.00000000e+03, 1.63842049e-01, 2.50000000e-02, 6.41565714e-01, 7.06368506e-02, 1.76317816e-01, 3.00000000e+03, 6.00000000e+03,4.93834317e-02, 1.49000000e-02, 4.69851778e-02])
+#Tried again w 11 layers. 21 minutes.PCE = .04282822642972328, nfev: 157, x: array([6.00000000e+03, 1.63842049e-01, 2.50000000e-02, 6.41565714e-01, 7.06368506e-02, 1.76317816e-01, 3.00000000e+03, 6.00000000e+03,4.93834317e-02, 1.49000000e-02, 4.69851778e-02])
+
 
 #Tried to plot the effect of FTO vs TiO2.
 #MediumOptimize doesn't work if 2 layers or less
 #Need to add variable to change which layer is the absorber
 #_^ This fixes issue with 2 or fewer layers
+#In SHGC need to figure out what Rtot actually is
 
 moopsbrgd
 
@@ -701,83 +710,3 @@ def CompleteOptimize(Thicknesses, LayersMaterials):
         func_to_minimize = lambda x : -OptimizeThis(x)
         return scipy.optimize.minimize(func_to_minimize, Thicknesses)
     return OptimizationStep(Thicknesses)['x']
-
-
-'''
-def GiveIVdata(n,Ns,Tcell,Absorbed):
-    data = pvlib.pvsystem.singlediode(Generated(eta, Absorbed)*q, RR0(eta, Absorbed)*q, Rs, Rsh, n*Ns*kB*Tcell/q, ivcurve_pnts = 500)
-    Isc = data['i_sc']
-    Voc = data['v_oc']
-    Imp = data['i_mp']
-    Vmp = data['v_mp']
-    Pmp = data['p_mp']
-    Vvalues = np.array(data['v'])
-    Ivalues = np.array(data['i'])
-    plt.figure()
-    plt.plot(Vvalues,Ivalues, label = 'IV')
-    plt.xlabel('Voltage, (V)')
-    plt.ylabel('Current (A)')
-    P_values = np.array([Ivalues * Vvalues])
-    plt.plot(Vvalues , P_values.T, label = 'Power')
-    plt.ylim(-1, 150)
-    plt.legend(loc = 'upper right')
-    plt.show()
-    print('Isc = ', Isc, ', Voc = ', Voc, ', Imp = ', Imp, ', Vmp = ', Vmp, ', Pmp =', Pmp)
-    return #[Isc, Voc, Imp, Vmp, Pmp]
-GiveIVdata(1,1,Tcell,EInterp)
-'''
-
-
-'''
-def Give_PCE(eta,Absorbed, Ti, To, n = 1, Ns = 1):
-    #Tcell = 300
-    #data1 = pvlib.pvsystem.singlediode(Generated(eta, Absorbed)*q, RR0(eta, Absorbed,Tcell)*q, Rs, Rsh, n*Ns*kB*Tcell/q, ivcurve_pnts = 500)  
-    #Pmp = data1['p_mp']
-    #print('Isc = ', Isc, ', Voc = ', Voc, ', Imp = ', Imp, ', Vmp = ', Vmp, ', Pmp =', Pmp)
-    data = pvlib.pvsystem.singlediode(Generated(eta, Absorbed)*q, RR0(eta, Absorbed)*q, Rs, Rsh, n*Ns*kB*Tcell/q, ivcurve_pnts = 500)  
-    Isc = data['i_sc']
-    Voc = data['v_oc']
-    Imp = data['i_mp']
-    Vmp = data['v_mp']
-    Pmp = data['p_mp']
-    Vvalues = np.array(data['v'])
-    Ivalues = np.array(data['i'])
-    print('Isc = ', Isc, ', Voc = ', Voc, ', Imp = ', Imp, ', Vmp = ', Vmp, ', Pmp =', Pmp)
-    
-    plt.figure()
-    plt.plot(Vvalues,Ivalues, label = 'IV')
-    plt.xlabel('Voltage, (V)')
-    plt.ylabel('Current (A)')
-    P_values = np.array([Ivalues * Vvalues])
-    plt.plot(Vvalues , P_values.T, label = 'Power')
-    plt.ylim(-1, 150)
-    plt.legend(loc = 'upper right')
-    plt.show()
-    #print("PCE =", Pmp/solar_constant)
-    return Pmp/solar_constant
-print("PCE =", Give_PCE(0.6,EInterp,300,300))
-'''
-#def current_density_ideal(voltage, eta,Absorbed):
-#    return e * (Generated(eta,Absorbed) - RR0(eta,Absorbed) * np.exp(e * voltage / (kB * Tcell)))
-#def current_density_ideal(voltage, eta,Absorbed):
-#    return e * (Generated(eta,Absorbed) - RR0(eta,Absorbed) * np.exp(e * voltage / (kB * Tcell)))
-
-#def current_density(voltage, eta,Absorbed):
-#    Current_dens = lambda current:(e * (Generated(eta,Absorbed) - RR0(eta,Absorbed) * np.exp(e * (voltage + current * A * Rs) / (kB * Tcell))) - current * A)
-#    Solution = scipy.optimize.fsolve(Current_dens, current_density_ideal(voltage, eta, Absorbed))
-#    return Solution
-
-#def current_density(voltage, eta,Absorbed):
-#    Current_dens = lambda current:(e * ((Generated(eta,Absorbed) - RR0(eta,Absorbed) * np.exp(e * (voltage + current * A * Rs) / (kB * Tcell)) - (voltage + current * A * Rs)/Rsh)) - current * A)
-#    Solution = scipy.optimize.fsolve(Current_dens, current_density_ideal(voltage, eta, Absorbed))
-#    return Solution
-
-
-#print('current without resistance = ', (current_density_ideal(6, 0.8, AbsInterp)))
-#print('current with resistance = ', (current_density(6, 0.8, AbsInterp)))
-
-
-#print(AM15[:,0])
-#print(lams)
-#data2 = pvlib.pvsystem.singlediode(12,RR0(eta, Absorbed),Rs,Rsh,2*kB*Tcell/q,ivcurve_pnts = 5)
-#print(data2)
