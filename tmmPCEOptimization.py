@@ -176,6 +176,9 @@ To = 300
 Ui = 8.3 #W/(m**2 *K) 
 Uo = 17 #W/(m**2 *K)
 Rtot = 8
+
+
+
 start1 = time.time()
 print('Sim PCE for Optimization =',MediumOptimize(Thickness))
 end1 = time.time()
@@ -187,8 +190,7 @@ print(WERT)
 #WERT2 = TotalOptimize(eta, Thickness, LayersMaterials, AbsorberLayer, Boundary, Ti = 300, To = 300, Ui = 8.3, Uo = 17, Rs = .02, Rsh = 100, n = 1, Ns = 1)
 #print(WERT2)
 
-TimePCE = (end1-start1)
-TimeOptimize = (end2 - start2)
+
 
 
 #With 6 layers, dotheoptimize took 57 minutes to complete.No constraint on VLT
@@ -226,7 +228,8 @@ Tcell = tpc.TcellCalc(As, Ti,To, eta, Absorbed, Ui, Uo, Rs, Rsh)
 data = tpc.GiveIVData(eta, Absorbed, Rs, Rsh,Tcell, n = 1, Ns = 1)
 SHGC = tpc.SHGC(eta, Ts, Ti, To, Rtot, Tcell, solar_constant, Ui)
 PCE = tpc.max_efficiency(eta,Absorbed,Tcell, solar_constant, Rs, Rsh)
-
+TimePCE = (end1-start1)
+TimeOptimize = (end2 - start2)
 
 
 #Spectral Curves
