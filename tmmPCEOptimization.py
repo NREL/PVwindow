@@ -25,13 +25,14 @@ import tmmPCECalc as tpc
 from tmmPCECalc import Glass,TiO2, FTO, MAPI,AZO,ITO,ITOlowE,SnO2,SnO2lowE,SnO2lowEfat,SiO2,NiO,Ag,TiO2lowE,TiO2lowEfat,Bleach,ClAlPc,C60,IR,MAPBr,EVA
 import PVColor as pvc
 from colorpy import plots, ciexyz, colormodels #need to install colorpy to call all packages at once
+import time
 
 
 degree = np.pi/180
 inc_angle = 0.*degree   
 num_lams = 500
 lams = np.linspace(0.3,2.5,num=num_lams) #um
-
+'''
 Rs = .02 #* ohm #series resistance
 Rsh = 10 #* ohm #shunt resistance
 eta = 0.6
@@ -41,7 +42,7 @@ Ti = 300
 To = 300
 Ui = 8.3 #W/(m**2 *K) 
 Uo = 17 #W/(m**2 *K)
-
+'''
 q = 1.602176634e-19 #elementary charge C
 c0 = 299792458 #m/s
 hPlanck = 6.62607015e-34 #J*s   4.135667516e-15 #eV*s               
@@ -51,7 +52,7 @@ kB = 1.380649e-23 #J/K    8.61733034e-5 #eV/K
 GlassBound = (5999,6001)
 TiO2Bound = (0.025,.1)
 FTOBound = (0.1,0.5)
-MAPIBound = (.06,.260)
+MAPIBound = (.06,.900)#.260)
 AZOBound = (.1,.4)
 ITOBound = (.1,.4)
 ITOlowEBound = (0.03,.15)
@@ -74,7 +75,7 @@ EVABound = (2999,3001)
 GlassTh = 6000
 TiO2Th = .050
 FTOTh = .250
-MAPITh = .130
+MAPITh = .130  #.800 
 AZOTh = 0.200
 ITOTh = 0.200
 ITOlowETh = 0.075
@@ -113,14 +114,14 @@ def VLTconstraint(Thickness):
     VLTstack=Stack(layers)
     VLT=VLTstack.get_visible_light_transmission(lams,inc_angle)
     return VLT - 0.5
-VLTc = {'type': 'eq', 'func': VLTconstraint}
+VLTc = {'type': 'ineq', 'fun': VLTconstraint}
 
 
 
 def MediumOptimize(Thickness):
     #AbsorberLayer = 4
-    layerss = tpc.GiveLayers(Thickness, LayersMaterials)
-    SpectraCurves = tpc.Spectra(layerss,AbsorberLayer)
+    layers = tpc.GiveLayers(Thickness, LayersMaterials)
+    SpectraCurves = tpc.Spectra(layers,AbsorberLayer)
     Absorbed = tpc.GiveEInterp(SpectraCurves['AbsByAbsorbers'])
     Tcell = tpc.TcellCalc(SpectraCurves['As'],Ti,To,eta,Absorbed,Ui, Uo, Rs, Rsh)
     return tpc.max_efficiency(eta,Absorbed,Tcell, solar_constant, Rs, Rsh)
@@ -130,7 +131,7 @@ def dotheoptimize(Thickness):
     func_to_minimize = lambda x : -MediumOptimize(x)
     #bnd = scipy.optimize.Bounds(.02, .1, keep_feasible=False)#If testing a single layer use this line
     #return scipy.optimize.minimize(func_to_minimize, Thickness,method='SLSQP',bounds = bnd )
-    return scipy.optimize.minimize(func_to_minimize, Thickness,method='SLSQP', bounds = Boundary)#, constraints = (VLTc))
+    return scipy.optimize.minimize(func_to_minimize, Thickness,method='SLSQP', bounds = Boundary, constraints = (VLTc), options={'ftol': 1e-06, 'eps': 1.4901161193847656e-08, 'finite_diff_rel_step': None})
 
 def TotalOptimize(eta, Thickness, LayersMaterials, Boundaries, AbsorberLayer, Ti = 300, To = 300, Ui = 8.3, Uo = 17, Rs = .02, Rsh = 100, n = 1, Ns = 1):
     AbsorberLayer = AbsorberLayer
@@ -157,16 +158,16 @@ def TotalOptimize(eta, Thickness, LayersMaterials, Boundaries, AbsorberLayer, Ti
 #Thickness = [0.02]
 #Thickness = (6000,.250,0.050,0.500,0.070,0.206,3000,6000,0.040,0.022,0.038)
 #Thickness = (6000,.250,0.050,0.500,0.050,0.200,3000,6000,0.030,0.015,0.030)
-Thickness = [GlassTh,FTOTh,TiO2Th,MAPITh,NiOTh,ITOTh,EVATh,GlassTh,TiO2lowETh,AgTh,TiO2lowETh]
+Thickness = [GlassTh,FTOTh,TiO2Th,MAPBrTh]#,NiOTh,ITOTh,EVATh,GlassTh,TiO2lowETh,AgTh,TiO2lowETh]
 #LayersMaterials = [FTO]
 #LayersMaterials = [Glass, FTO,TiO2, MAPBr]
 #LayersMaterials = [Glass, FTO,TiO2,MAPBr, NiO, ITO]
-LayersMaterials = [Glass,FTO,TiO2,MAPI,NiO,ITO,EVA,Glass,TiO2lowE,Ag,TiO2lowE]
+LayersMaterials = [Glass,FTO,TiO2,MAPBr]#,NiO,ITO,EVA,Glass,TiO2lowE,Ag,TiO2lowE]
 #Bounds = GiveBounds(LayersMaterials)
-Boundary = [GlassBound,FTOBound,TiO2Bound,MAPIBound,NiOBound,ITOBound,EVABound,GlassBound,TiO2lowEBound,AgBound,TiO2lowEBound]
+Boundary = [GlassBound,FTOBound,TiO2Bound,MAPBrBound]#,NiOBound,ITOBound,EVABound,GlassBound,TiO2lowEBound,AgBound,TiO2lowEBound]
 AbsorberLayer = 4
-Rs = .02 #* ohm #series resistance
-Rsh = 10 #* ohm #shunt resistance
+Rs = .002 #* ohm #series resistance
+Rsh = 1000 #* ohm #shunt resistance
 eta = 0.6
 n = 1
 Ns = 1
@@ -175,13 +176,19 @@ To = 300
 Ui = 8.3 #W/(m**2 *K) 
 Uo = 17 #W/(m**2 *K)
 Rtot = 8
+start1 = time.time()
 print('Sim PCE for Optimization =',MediumOptimize(Thickness))
+end1 = time.time()
+start2 = time.time()
 WERT = dotheoptimize(Thickness)
+end2 = time.time()
 print(WERT)
-print('VLT = ',VLTconstraint(WERT['x'])+.5)
+#print('VLT = ',VLTconstraint(WERT['x'])+.5)
 #WERT2 = TotalOptimize(eta, Thickness, LayersMaterials, AbsorberLayer, Boundary, Ti = 300, To = 300, Ui = 8.3, Uo = 17, Rs = .02, Rsh = 100, n = 1, Ns = 1)
 #print(WERT2)
 
+TimePCE = (end1-start1)
+TimeOptimize = (end2 - start2)
 
 
 #With 6 layers, dotheoptimize took 57 minutes to complete.No constraint on VLT
@@ -219,7 +226,6 @@ Tcell = tpc.TcellCalc(As, Ti,To, eta, Absorbed, Ui, Uo, Rs, Rsh)
 data = tpc.GiveIVData(eta, Absorbed, Rs, Rsh,Tcell, n = 1, Ns = 1)
 SHGC = tpc.SHGC(eta, Ts, Ti, To, Rtot, Tcell, solar_constant, Ui)
 PCE = tpc.max_efficiency(eta,Absorbed,Tcell, solar_constant, Rs, Rsh)
-print('PCE = ',PCE,'VLT = ', VLT, 'SHGC = ',SHGC, 'Tcell = ',Tcell)
 
 
 
@@ -251,6 +257,7 @@ plt.xlabel('Energy, J')
 plt.show()
 
 
+
 lamsnm = np.array(lams)
 lamsnm*=1000
 spectrumT = np.vstack((lamsnm, Ts)).T
@@ -263,6 +270,14 @@ plt.show()
 '''
 pvc.GiveColorSwatch(spectrumRf, spectrumT)
 pvc.plot_xy_on_fin(spectrumT, spectrumRf)
+
+
+
+
+
+print('PCE = ',PCE,'VLT = ', VLT, 'SHGC = ',SHGC, 'Tcell = ',Tcell,'time to calculate PCE from scratch in seconds = ', TimePCE, 'Time to run optimizer in minutes = ',TimeOptimize/60)
+
+
 
 
 
