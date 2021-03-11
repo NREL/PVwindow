@@ -21,7 +21,7 @@ assert sys.version_info >= (3,6), 'Requires Python 3.6+'
 import pvlib
 
 from pvlib import pvsystem
-
+import PVColor as pvc
 
 
 # This whole thing uses microns for length
@@ -207,6 +207,16 @@ def VLT(layers):
     VLTstack=Stack(layers)
     return VLTstack.get_visible_light_transmission(lams,inc_angle)
 
+#Requires input of single absorber layer with a tuple of (lb,ub)
+def GiveMinMaxVLT(AbsorberType, Bounds):
+    minThick = GiveLayers([Bounds[0]], [AbsorberType]) 
+    maxThick = GiveLayers([Bounds[1]], [AbsorberType])
+    minimum = VLT(maxThick)
+    maximum = VLT(minThick)
+    return {'Material':AbsorberType.__name__,'minVLT':minimum, 'maxVLT':maximum, 'minThick':Bounds[0],
+            'maxThick':Bounds[1]}
+
+
 
 # ******************** Here I add PCE calculation *********************#
             
@@ -250,8 +260,10 @@ plt.show()
 def SPhotonsPerTEA(Ephoton):
     λ = hPlanck * c0 / Ephoton *1e6  #um
     return AM15interp(λ) * (1 / Ephoton) * (hPlanck * c0 / Ephoton**2) * 1e9
+def PowerPerTEA(Ephoton):
+    return Ephoton * SPhotonsPerTEA(Ephoton)
 def Solar_Constant(Ephoton):
-    PowerPerTEA = lambda E : E * SPhotonsPerTEA(E)
+    #PowerPerTEA = lambda E : E * SPhotonsPerTEA(E)
     return scipy.integrate.quad(PowerPerTEA,E_min,E_max, full_output=1)[0]
 # quad() is ordinary integration; full_output=1 is (surprisingly) how you hide
 # the messages warning about poor accuracy in integrating.
@@ -266,7 +278,28 @@ def GiveEInterp(Parameter):
     return scipy.interpolate.interp1d(Ephoton, Curve)
 
 
-
+def GiveQ(Spectra, eta = 1):#Spectra must be an interpolated function
+        def integrand(E):
+            return eta * Spectra(E) * PowerPerTEA(E)
+        return scipy.integrate.quad(integrand, E_min, E_max, full_output=1)[0]        
+        ''' 
+       def LowerB():
+            return E_min
+        def UpperB():
+            return E_max
+        def integrand(self,E):
+            return eta * Spectra(E) * SPhotonsPerTEA(E)
+        return scipy.integrate.dblquad(integrand, E_min, E_max, LowerB(), UpperB())[0]        
+        '''
+def GivePhotons(Spectra, eta):#Spectra must be an interpolated function
+        def LowerB():
+            return E_min
+        def UpperB():
+            return E_max
+        def integrand(self,E):
+            return eta * Spectra(E) * SPhotonsPerTEA(E)
+        return scipy.integrate.dblquad(integrand, E_min, E_max, LowerB(), UpperB())[0]        
+       
 # Here I input the spectrum of photons absorbed by the absorber material (Absorbed)
 # and the electron-hole pair extraction efficiency (eta). EQE = eta * Absorbed
 
@@ -289,20 +322,21 @@ def Give_Pmp(eta, Absorbed, Rs, Rsh, Tcell, n = 1, Ns = 1):
 
 
 #Calculate equilibrium Tcell
-def TcellCalc(TotalAbs, Ti,To, eta, Absorbed, Ui, Uo, Rs, Rsh):
+def TcellCalc(TotalAbs, eta, Ti,To, Absorbed, Ui, Uo, Rs, Rsh):
     AbsTotal = GiveEInterp(TotalAbs)
     #Absorbed = GiveEInterp(Absorbed)
-    def Qabs(eta, AbsTotal):
-        def LowerB():
-            return E_min
-        def UpperB():
-            return E_max
-        def integrand(self,E):
-            return eta * AbsTotal(E) * SPhotonsPerTEA(E)
-        return scipy.integrate.dblquad(integrand, E_min, E_max, LowerB(), UpperB())[0]        
-    Temp = lambda Tcell: (Qabs(eta,AbsTotal) - Give_Pmp(eta,Absorbed,Rs,Rsh, Tcell) + Ui*Ti + Uo*To)/(Ui + Uo)-Tcell
+    #eta is included in GiveQ for simplicity but should not be used for calculating Tcell. eta is set to 1
+    Qabs = GiveQ(AbsTotal)
+    #def Qabs(eta, AbsTotal):
+    #    def LowerB():
+    #        return E_min
+    #    def UpperB():
+    #        return E_max
+    #    def integrand(self,E):
+    #        return eta * AbsTotal(E) * SPhotonsPerTEA(E)
+    #    return scipy.integrate.dblquad(integrand, E_min, E_max, LowerB(), UpperB())[0]        
+    Temp = lambda Tcell: (Qabs - Give_Pmp(eta,Absorbed,Rs,Rsh, Tcell) + Ui*Ti + Uo*To)/(Ui + Uo)-Tcell
     return scipy.optimize.fsolve(Temp, 300)[0]
-
 
 
 
@@ -316,7 +350,7 @@ def GiveIVData(eta, Absorbed, Rs, Rsh,Tcell, n = 1, Ns = 1):
     Pmp = data['p_mp']
     Vvalues = np.array(data['v'])
     Ivalues = np.array(data['i'])
-    print('Isc = ', Isc, ', Voc = ', Voc, ', Imp = ', Imp, ', Vmp = ', Vmp, ', Pmp =', Pmp)
+    #print('Isc = ', Isc, ', Voc = ', Voc, ', Imp = ', Imp, ', Vmp = ', Vmp, ', Pmp =', Pmp)
 
     plt.figure()
     plt.plot(Vvalues,Ivalues, label = 'IV')
@@ -332,21 +366,99 @@ def GiveIVData(eta, Absorbed, Rs, Rsh,Tcell, n = 1, Ns = 1):
 
 
 
-def SHGC(eta, Ts, Ti, To, Rtot, Tcell, solar_constant, Ui):
+def SHGC(Ts, Ti, To, Tcell, solar_constant, Ui):
     #Tcell = TcellCalc(As,Ti,To,eta,Absorbed)
+    Rtot = 1/Ui #This is approximate because Ui is assumed
+    #Included in GiveQ for simplicity but should not be used for calculating SHGC
     TransTotal = GiveEInterp(Ts)
-    def Qtrans(eta, TransTotal):
-        def LowerB():
-            return E_min
-        def UpperB():
-            return E_max
-        def integrand(self,E):
-            return eta * TransTotal(E) * SPhotonsPerTEA(E)
-        return scipy.integrate.dblquad(integrand, E_min, E_max, LowerB(), UpperB())[0]
-    return (Qtrans(eta, TransTotal) + Ui*(Tcell-Ti) - ((To-Ti)/Rtot))/solar_constant
+    Qtrans = GiveQ(TransTotal,1)
+    #def Qtrans(eta, TransTotal):
+    #    def LowerB():
+    #        return E_min
+    #    def UpperB():
+    #        return E_max
+    #    def integrand(self,E):
+    #        return eta * TransTotal(E) * SPhotonsPerTEA(E)
+    #    return scipy.integrate.dblquad(integrand, E_min, E_max, LowerB(), UpperB())[0]
+    return (Qtrans + Ui*(Tcell-Ti) - ((To-Ti)/Rtot))/solar_constant
 
 def max_efficiency(eta,Absorbed,Tcell, solar_constant, Rs, Rsh):
     #Tcell = TcellCalc(As,Ti,To,eta,Absorbed)
     return Give_Pmp(eta, Absorbed, Rs, Rsh, Tcell) / solar_constant
 
+def GiveImportantInfo(WERT, LayersMaterials,eta,Ti,To,Ui,Uo,Rs,Rsh,solar_constant):
+    
+    NeoThickness = WERT['x'] 
+    layers = GiveLayers(NeoThickness,LayersMaterials)
 
+    spectra = Spectra(layers ,4)
+    AbsByAbsorbers = spectra['AbsByAbsorbers']
+    Ts = spectra['Ts']
+    Rfs = spectra['Rfs']
+    Rbs = spectra['Rbs']
+    As = spectra['As']
+    sanities = spectra['Total']
+    Absorbed = GiveEInterp(AbsByAbsorbers)
+    VLTcalc = VLT(layers)
+    Tcell = TcellCalc(As,eta, Ti,To, Absorbed, Ui, Uo, Rs, Rsh)
+    #Absorbed = tpc.GiveEInterp(tpc.Spectra(tpc.GiveLayers(Thickness, LayersMaterials),4)['AbsByAbsorbers'])
+    data = GiveIVData(eta, Absorbed, Rs, Rsh,Tcell, n = 1, Ns = 1)
+    Isc = data['i_sc']
+    Voc = data['v_oc']
+    Imp = data['i_mp']
+    Vmp = data['v_mp']
+    Pmp = data['p_mp']
+    SHGCcalc = SHGC(Ts, Ti, To, Tcell, solar_constant, Ui)
+    PCE = max_efficiency(eta,Absorbed,Tcell, solar_constant, Rs, Rsh)
+    #TimePCE = (end1-start1)
+    #TimeOptimize = (end2 - start2)
+
+
+    #Spectral Curves
+    X = np.transpose([lams,Absorbed])
+    #np.savetxt('./Output/AbsByAbsorber.txt',X,delimiter=',',header="wavelength [micron], AbsByAbsorber [1]")
+    Y = np.transpose([lams,Ts,Rfs,Rbs])
+    #np.savetxt('./Output/TRfRb.txt',Y,delimiter=',',header="wavelength [micron], T [1], R_f [1], R_b [1]")
+    plt.figure()
+    plt.plot(lams,Rfs,color='magenta',marker=None,label="$R_f$")
+    plt.plot(lams,Ts,color='green',marker=None,label="$T$")
+    plt.plot(lams,Rbs,color='purple',marker=None,label="$R_b$")
+    plt.plot(lams,As,color='black',marker=None,label="A")
+    plt.plot(lams,AbsByAbsorbers,color='black',linestyle='--',marker=None,label="AbsByAbsorber")
+    plt.plot(lams,sanities,color='gold',marker=None,label="R+A+T")
+    plt.plot(lams,VLTSpectrum(layers).cieplf(lams),color='red',marker=None,label="photopic")
+    plt.xlabel('wavelength, $\mu$m')
+    plt.legend(loc = 'upper right')
+    plt.show()
+
+    plt.figure()
+    plt.plot(Ephoton, Ts, color='magenta',marker=None,label="$T$")
+    plt.plot(Ephoton, Rfs,color='green',marker=None,label="$R_f$")
+    plt.plot(Ephoton, Rbs,color='purple',marker=None,label="$R_b$")
+    plt.plot(Ephoton, AbsByAbsorbers,color='black',marker=None,label="Abs")
+    #plt.plot(Ephoton,tpc.VLTSpectrum(layers).cieplf(lams),color='red',marker=None,label="photopic")
+    plt.legend(loc = 'upper right')
+    plt.xlabel('Energy, J')
+    plt.show()
+
+
+
+    lamsnm = np.array(lams)
+    lamsnm*=1000
+    spectrumT = np.vstack((lamsnm, Ts)).T
+    spectrumRf = np.vstack((lamsnm, Rfs)).T
+    '''
+    plots.spectrum_plot (spectrumRf, 'Rf', 'Rf_Color', 'Wavelength ($nm$)', 'Intensity')
+    plt.show()
+    plots.spectrum_plot (spectrumT, 'T', 'T_Color', 'Wavelength ($nm$)', 'Intensity')
+    plt.show()
+    '''
+    pvc.GiveColorSwatch(spectrumRf, spectrumT)
+    pvc.plot_xy_on_fin(spectrumT, spectrumRf)
+
+
+
+
+
+    print('PCE = ',PCE,'VLT = ', VLTcalc, 'SHGC = ',SHGCcalc, 'Tcell = ',Tcell)#,'time to calculate PCE from scratch in seconds = ', TimePCE, 'Time to run optimizer in minutes = ',TimeOptimize/60)
+    return {'PCE':PCE, 'VLT':VLTcalc, 'SHGC':SHGCcalc, 'Tcell':Tcell,'Isc':Isc, 'Voc': Voc, 'Imp': Imp, 'Vmp': Vmp,'Pmp': Pmp}

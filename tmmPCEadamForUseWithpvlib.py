@@ -23,7 +23,7 @@ import pvlib
 from pvlib import pvsystem
 from colorpy import plots, ciexyz, colormodels #need to install colorpy to call all packages at once
 import PVColor as pvc
-
+import tmmPCECalc as tpc
 
 
 #import numericalunits
@@ -282,6 +282,19 @@ Rbs = spectra['Rbs']
 As = spectra['As']
 sanities = spectra['Total']
 
+
+QAs = tpc.GiveQ(tpc.GiveEInterp(As))
+QTs = tpc.GiveQ(tpc.GiveEInterp(Ts))
+QRfs = tpc.GiveQ(tpc.GiveEInterp(Rfs))
+QRbs = tpc.GiveQ(tpc.GiveEInterp(Rbs))
+print(QAs,QTs,QRfs,QRbs, QAs+QTs+QRfs)
+
+Moopsway
+
+
+
+
+
 lamsnm = np.array(lams)
 lamsnm*=1000
 spectrumT = np.vstack((lamsnm, Ts)).T
@@ -518,6 +531,28 @@ def Generated(eta,Absorbed):
 
 
 
+
+
+'''
+def Qabs(eta, AbsTotal):
+        def LowerB():
+            return E_min
+        def UpperB():
+            return E_max
+        def integrand(self,E):
+            return eta * AbsTotal(E) * SPhotonsPerTEA(E)
+        return scipy.integrate.dblquad(integrand, E_min, E_max, LowerB(), UpperB())[0]        
+
+def Qabs2(eta, AbsTotal):
+        def integrand(E):
+            return eta * AbsTotal(E) * SPhotonsPerTEA(E)
+        return scipy.integrate.quad(integrand, E_min, E_max, full_output=1)[0]        
+
+wert = Qabs(1,Absorbed)
+wert2 = Qabs2(1,Absorbed)
+print(wert, wert2)
+Moopsbrgd
+'''
 
 def Give_Pmp(eta, Absorbed, Rs, Rsh, Tcell, n = 1, Ns = 1):
     data = pvlib.pvsystem.singlediode(Generated(eta, Absorbed)*q, RR0(eta, Absorbed,Tcell)*q, Rs, Rsh, n*Ns*kB*Tcell/q, ivcurve_pnts = 500)
