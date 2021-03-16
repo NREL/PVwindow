@@ -123,7 +123,8 @@ def MediumOptimize(Thickness):
     #AbsorberLayer = 4
     layers = tpc.GiveLayers(Thickness, LayersMaterials)
     SpectraCurves = tpc.Spectra(layers,AbsorberLayer)
-    Absorbed = tpc.GiveEInterp(SpectraCurves['AbsByAbsorbers'])
+    #Absorbed = tpc.GiveEInterp(SpectraCurves['AbsByAbsorbers'])
+    Absorbed = (SpectraCurves['AbsByAbsorbers'])
     Tcell = tpc.TcellCalc(SpectraCurves['As'],eta, Ti,To,Absorbed,Ui, Uo, Rs, Rsh)
     return tpc.max_efficiency(eta,Absorbed,Tcell, solar_constant, Rs, Rsh)
 
@@ -188,7 +189,8 @@ print('VLT range and thicknesses of absorber are',minmax)
 layers=tpc.GiveLayers(Thickness,LayersMaterials)
 Spectres = tpc.Spectra(layers, AbsorberLayer)
 As = Spectres['As']
-Absorbed = tpc.GiveEInterp(Spectres['AbsByAbsorbers'])
+#Absorbed = tpc.GiveEInterp(Spectres['AbsByAbsorbers'])
+Absorbed = Spectres['AbsByAbsorbers']
 TcellPreOp = tpc.TcellCalc(As, eta, Ti,To, Absorbed, Ui, Uo, Rs, Rsh)
 print('Tcell PreOp = ',TcellPreOp)
 
@@ -196,10 +198,41 @@ print('Tcell PreOp = ',TcellPreOp)
 PreOpInfo = tpc.GiveImportantInfo(Thickness, LayersMaterials,eta,Ti,To,Ui,Uo,Rs,Rsh,solar_constant)
 print('PreOp Calculations give',PreOpInfo)
 
+def RR0quad(eta,Absorbed,Tcell):
+    integrand = lambda E : eta * Absorbed(E) * (E)**2 / (np.exp(E / (kB * Tcell)) - 1)
+    integral = scipy.integrate.quad(integrand, tpc.E_min, tpc.E_max, full_output=1)[0]
+    return ((2 * np.pi) / (c0**2 * hPlanck**3)) * integral# / 1.60218e-19 #J/eV
+#units = 1/(s*m**2)
+
+def RR0trapz(eta,Absorbed,Tcell):
+    Absorbed = Absorbed.round(8)
+    integrand = eta * Absorbed * (Ephoton)**2 / (np.exp(Ephoton / (kB * Tcell)) - 1)
+    integral = scipy.integrate.trapz(integrand, Ephoton)
+    return ((2 * np.pi) / (c0**2 * hPlanck**3)) * integral
+#RR0 with trapz gives a significantly different answer than RR0 with quad
+
+RR0Quad = RR0quad(eta,tpc.GiveEInterp(Absorbed),300)
+RR0Trapz = RR0trapz(eta, Absorbed, 300)
+print('RR0Quad = ', RR0Quad)
+print('RR0Trapz = ', RR0Trapz)
 
 
+def GenQuad(eta,Absorbed):
+    integrand = lambda E : eta * Absorbed(E) * tpc.SPhotonsPerTEA(E)
+#    integral = scipy.integrate.quad(integrand, E_min, E_max, full_output=1)[0]
+    return scipy.integrate.quad(integrand, tpc.E_min, tpc.E_max, full_output=1)[0]
+#units 1/(s*m**2)
 
+def GenTrapz(eta,Absorbed):
+    Absorbed = Absorbed.round(8)
+    integrand = eta * Absorbed * tpc.SPhotonsPerTEA(Ephoton)
+    return np.trapz(integrand, Ephoton)
+GenQuad = GenQuad(eta,tpc.GiveEInterp(Absorbed))
+GenTrapz = GenTrapz(eta, Absorbed)
+print('GenQuad = ', GenQuad)
+print('GenTrapz = ', GenTrapz)
 
+TrapzSquad
 #_________________________________Optimization here__________________________
 #tpc.Give_Pmp(eta,Absorbed,Rs,Rsh, Tcell)
 start1 = time.time()

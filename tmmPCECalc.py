@@ -243,7 +243,8 @@ AM15 = downloaded_array[1:, [0,2]]
 # print(AM15)
 
     
-Ephoton = hPlanck * c0 / lams *1e6 #J
+Ephotonrr = hPlanck * c0 / lams *1e6 #J #Big to small
+Ephoton = Ephotonrr[::-1]  #small to big
 E_min = min(Ephoton) #J   energy units from hPlanck
 E_max = max(Ephoton) #J   energy units from hPlanck
 
@@ -288,7 +289,7 @@ def GiveEInterp(Parameter):
     Curve = Parameter.round(8)
     return scipy.interpolate.interp1d(Ephoton, Curve)
 
-
+'''
 def GiveQ(Spectra, eta = 1):#Spectra must be an interpolated function
         def integrand(E):
             return eta * Spectra(E) * PowerPerTEA(E)
@@ -298,7 +299,7 @@ def GiveQ(Spectra, eta = 1):#Spectra must be an interpolated function
 def GiveQ(Spectra, eta = 1):#Spectra must be an array
         integrand = eta*Spectra*PowerPerTEA(Ephoton)
         return -np.trapz(integrand, Ephoton)     
-'''
+
 
 '''
 def GivePhotons(Spectra, eta):#Spectra must be an interpolated function
@@ -308,7 +309,7 @@ def GivePhotons(Spectra, eta):#Spectra must be an interpolated function
 '''
 # Here I input the spectrum of photons absorbed by the absorber material (Absorbed)
 # and the electron-hole pair extraction efficiency (eta). EQE = eta * Absorbed
-
+'''
 def RR0(eta,Absorbed,Tcell):
     integrand = lambda E : eta * Absorbed(E) * (E)**2 / (np.exp(E / (kB * Tcell)) - 1)
     integral = scipy.integrate.quad(integrand, E_min, E_max, full_output=1)[0]
@@ -321,38 +322,29 @@ def Generated(eta,Absorbed):
     return scipy.integrate.quad(integrand, E_min, E_max, full_output=1)[0]
 #units 1/(s*m**2)
 '''
+#Trapz calculations
 #Using trapezoidal rule for integration instaed of quad
 #AbsByAbsorbers is an aray of intensities, not an interpolated function.
 def RR0(eta,Absorbed,Tcell):
-    AbsByAbsorbers = AbsByAbsorbers.round(8)
-    integrand = eta * AbsByAbsorbers * (Ephoton)**2 / (np.exp(Ephoton / (kB * Tcell)) - 1)
+    Absorbed = Absorbed.round(8)
+    integrand = eta * Absorbed * (Ephoton)**2 / (np.exp(Ephoton / (kB * Tcell)) - 1)
     integral = scipy.integrate.trapz(integrand, Ephoton)
     return ((2 * np.pi) / (c0**2 * hPlanck**3)) * integral
+#RR0 with trapz gives a significantly different answer than RR0 with quad
 
 def Generated(eta,Absorbed):
     Absorbed = Absorbed.round(8)
     integrand = eta * Absorbed * SPhotonsPerTEA(Ephoton)
-#    integral = scipy.integrate.quad(integrand, E_min, E_max, full_output=1)[0]
     return np.trapz(integrand, Ephoton)
-'''
+
 def Give_Pmp(eta, Absorbed, Rs, Rsh, Tcell, n = 1, Ns = 1):
     data = pvlib.pvsystem.singlediode(Generated(eta, Absorbed)*q, RR0(eta, Absorbed,Tcell)*q, Rs, Rsh, n*Ns*kB*Tcell/q, ivcurve_pnts = 500)
     return data['p_mp']
 
 #Calculate equilibrium Tcell
 def TcellCalc(TotalAbs, eta, Ti,To, Absorbed, Ui, Uo, Rs, Rsh):
-    AbsTotal = GiveEInterp(TotalAbs)
-    #Absorbed = GiveEInterp(Absorbed)
-    #eta is included in GiveQ for simplicity but should not be used for calculating Tcell. eta is set to 1
-    Qabs = GiveQ(AbsTotal)
-    #def Qabs(eta, AbsTotal):
-    #    def LowerB():
-    #        return E_min
-    #    def UpperB():
-    #        return E_max
-    #    def integrand(self,E):
-    #        return eta * AbsTotal(E) * SPhotonsPerTEA(E)
-    #    return scipy.integrate.dblquad(integrand, E_min, E_max, LowerB(), UpperB())[0]        
+    #AbsTotal = GiveEInterp(TotalAbs)
+    Qabs = GiveQ(TotalAbs)
     Temp = lambda Tcell: (Qabs - Give_Pmp(eta,Absorbed,Rs,Rsh, Tcell) + Ui*Ti + Uo*To)/(Ui + Uo)-Tcell
     return scipy.optimize.fsolve(Temp, 300)[0]
 
@@ -387,17 +379,8 @@ def GiveIVData(eta, Absorbed, Rs, Rsh,Tcell, n = 1, Ns = 1):
 def SHGC(Ts, Ti, To, Tcell, solar_constant, Ui):
     #Tcell = TcellCalc(As,Ti,To,eta,Absorbed)
     Rtot = 1/Ui #This is approximate because Ui is assumed
-    #Included in GiveQ for simplicity but should not be used for calculating SHGC
-    TransTotal = GiveEInterp(Ts)
-    Qtrans = GiveQ(TransTotal,1)
-    #def Qtrans(eta, TransTotal):
-    #    def LowerB():
-    #        return E_min
-    #    def UpperB():
-    #        return E_max
-    #    def integrand(self,E):
-    #        return eta * TransTotal(E) * SPhotonsPerTEA(E)
-    #    return scipy.integrate.dblquad(integrand, E_min, E_max, LowerB(), UpperB())[0]
+    #TransTotal = GiveEInterp(Ts)
+    Qtrans = GiveQ(Ts)
     return (Qtrans + Ui*(Tcell-Ti) - ((To-Ti)/Rtot))/solar_constant
 
 def max_efficiency(eta,Absorbed,Tcell, solar_constant, Rs, Rsh):
@@ -416,10 +399,9 @@ def GiveImportantInfo(WERT, LayersMaterials,eta,Ti,To,Ui,Uo,Rs,Rsh,solar_constan
     Rbs = spectra['Rbs']
     As = spectra['As']
     sanities = spectra['Total']
-    Absorbed = GiveEInterp(AbsByAbsorbers)
+    Absorbed = AbsByAbsorbers#GiveEInterp(AbsByAbsorbers)
     VLTcalc = VLT(layers)
     Tcell = TcellCalc(As,eta, Ti,To, Absorbed, Ui, Uo, Rs, Rsh)
-    #Absorbed = tpc.GiveEInterp(tpc.Spectra(tpc.GiveLayers(Thickness, LayersMaterials),4)['AbsByAbsorbers'])
     data = GiveIVData(eta, Absorbed, Rs, Rsh,Tcell, n = 1, Ns = 1)
     Isc = data['i_sc']
     Voc = data['v_oc']
