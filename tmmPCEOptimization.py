@@ -75,9 +75,9 @@ EVABound = (2999,3001)
 
 #Thicknesses
 GlassTh = 6000
-TiO2Th = .050
-FTOTh = .250
-MAPITh = .130  #.800 
+TiO2Th = 0.050
+FTOTh = 0.250
+MAPITh = 0.130  #.800 
 AZOTh = 0.200
 ITOTh = 0.200
 ITOlowETh = 0.075
@@ -147,6 +147,7 @@ def TotalOptimize(eta, Thickness, LayersMaterials, Boundaries, AbsorberLayer, Ti
     Uo = Uo
     return dotheoptimize(Thickness)
 
+
 #Global Min
 def VLTGconstraint(Thickness):
     layers = tpc.GiveLayers(Thickness, LayersMaterials)
@@ -154,6 +155,7 @@ def VLTGconstraint(Thickness):
     VLT=VLTstack.get_visible_light_transmission(lams,inc_angle)
     return VLT
 VLTGc = scipy.optimize.NonlinearConstraint(VLTGconstraint, 0.5, 1)
+
 def GlobalOptimize(Thickness):
     func_to_minimize = lambda x : -MediumOptimize(x)
     return scipy.optimize.differential_evolution(func_to_minimize, bounds = Boundary)#, constraints = (VLTGc)) #Thickness,method='SLSQP', bounds = Boundary, constraints = (VLTc), options={'ftol': 1e-06, 'eps': 1.4901161193847656e-08})#, 'finite_diff_rel_step': None})
@@ -179,6 +181,19 @@ To = 300
 Ui = 8.3 #W/(m**2 *K) 
 Uo = 17 #W/(m**2 *K)
 Rtot = 1/Ui
+
+layers = tpc.GiveLayers(Thickness,LayersMaterials)
+spectres = tpc.Spectra(layers,AbsorberLayer)
+Absorbed = tpc.GiveEInterp(spectres['AbsByAbsorbers'])
+
+
+RR0 = tpc.RR0(eta,Absorbed,300)
+gen = tpc.Generated(eta,Absorbed)
+Q = tpc.GiveQ(Absorbed)
+print('RR0 = ',RR0)
+print('gen = ',gen)
+print('Q = ',Q)
+
 
 
 minmax = tpc.GiveMinMaxVLTFromMaterials(LayersMaterials,AbsorberLayer, AbsorberBoundary)
@@ -264,8 +279,10 @@ PCE =  0.08320342823723645 VLT =  0.5240058022060908 SHGC =  0.9394718110561349 
 PCE =  0.0823026767378474 VLT =  0.5368890922289812 SHGC =  1.023465230604362 Tcell =  309.82218041481286
 [6.00000000e+03, 1.00000000e-01, 2.50000000e-02, 6.97669968e-01])
 '''
+
 moopsbrgd
 
+'''
 #Tried to plot the effect of FTO vs TiO2.
 
 #LayersMaterials = [FTO,TiO2]
@@ -290,4 +307,4 @@ ax.set_xlabel('FTO Thick')
 ax.set_ylabel('TiO2 Thick')
 ax.set_zlabel('PCE(x, y)')
 plt.show()
-
+'''
