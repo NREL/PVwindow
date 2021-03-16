@@ -75,8 +75,8 @@ EVABound = (2999,3001)
 
 #Thicknesses
 GlassTh = 6000
-TiO2Th = .050
-FTOTh = .250
+TiO2Th = .09#.050
+FTOTh = .49#.250
 MAPITh = .130  #.800 
 AZOTh = 0.200
 ITOTh = 0.200
@@ -191,6 +191,7 @@ Spectres = tpc.Spectra(layers, AbsorberLayer)
 As = Spectres['As']
 #Absorbed = tpc.GiveEInterp(Spectres['AbsByAbsorbers'])
 Absorbed = Spectres['AbsByAbsorbers']
+
 TcellPreOp = tpc.TcellCalc(As, eta, Ti,To, Absorbed, Ui, Uo, Rs, Rsh)
 print('Tcell PreOp = ',TcellPreOp)
 
@@ -200,39 +201,51 @@ print('PreOp Calculations give',PreOpInfo)
 
 def RR0quad(eta,Absorbed,Tcell):
     integrand = lambda E : eta * Absorbed(E) * (E)**2 / (np.exp(E / (kB * Tcell)) - 1)
-    integral = scipy.integrate.quad(integrand, tpc.E_min, tpc.E_max, full_output=1)[0]
-    return ((2 * np.pi) / (c0**2 * hPlanck**3)) * integral# / 1.60218e-19 #J/eV
+    integral = scipy.integrate.quad(integrand, tpc.E_max, tpc.E_min, full_output=1)[0]
+    return -((2 * np.pi) / (c0**2 * hPlanck**3)) * integral# / 1.60218e-19 #J/eV
 #units = 1/(s*m**2)
 
 def RR0trapz(eta,Absorbed,Tcell):
     Absorbed = Absorbed.round(8)
     integrand = eta * Absorbed * (Ephoton)**2 / (np.exp(Ephoton / (kB * Tcell)) - 1)
     integral = scipy.integrate.trapz(integrand, Ephoton)
-    return ((2 * np.pi) / (c0**2 * hPlanck**3)) * integral
+    return -((2 * np.pi) / (c0**2 * hPlanck**3)) * integral
 #RR0 with trapz gives a significantly different answer than RR0 with quad
 
 RR0Quad = RR0quad(eta,tpc.GiveEInterp(Absorbed),300)
 RR0Trapz = RR0trapz(eta, Absorbed, 300)
-print('RR0Quad = ', RR0Quad)
+print('RR0Quad = ', RR0Quad,'Was originally 4.83e-13')
 print('RR0Trapz = ', RR0Trapz)
 
 
 def GenQuad(eta,Absorbed):
     integrand = lambda E : eta * Absorbed(E) * tpc.SPhotonsPerTEA(E)
-#    integral = scipy.integrate.quad(integrand, E_min, E_max, full_output=1)[0]
     return scipy.integrate.quad(integrand, tpc.E_min, tpc.E_max, full_output=1)[0]
 #units 1/(s*m**2)
 
 def GenTrapz(eta,Absorbed):
     Absorbed = Absorbed.round(8)
     integrand = eta * Absorbed * tpc.SPhotonsPerTEA(Ephoton)
-    return np.trapz(integrand, Ephoton)
+    return -np.trapz(integrand, Ephoton)
 GenQuad = GenQuad(eta,tpc.GiveEInterp(Absorbed))
 GenTrapz = GenTrapz(eta, Absorbed)
-print('GenQuad = ', GenQuad)
+print('GenQuad = ', GenQuad,'Was originally 2.7e20')
 print('GenTrapz = ', GenTrapz)
 
-TrapzSquad
+def GiveQQuad(Spectra, eta = 1):#Spectra must be an interpolated function
+        def integrand(E):
+            return eta * Spectra(E) * tpc.PowerPerTEA(E)
+        return scipy.integrate.quad(integrand, tpc.E_min, tpc.E_max, full_output=1)[0]
+def GiveQTrapz(Spectra, eta = 1):#Spectra must be an array
+        Spectra = Spectra.round(8)
+        integrand = eta*Spectra*tpc.PowerPerTEA(Ephoton)
+        return -np.trapz(integrand, Ephoton)
+GiveQQuad = GiveQQuad(tpc.GiveEInterp(Absorbed))
+GiveQTrapz = GiveQTrapz(Absorbed)
+print('GiveQQuad = ', GiveQQuad,'Was originally 195')
+print('GiveQTrapz = ', GiveQTrapz)
+
+
 #_________________________________Optimization here__________________________
 #tpc.Give_Pmp(eta,Absorbed,Rs,Rsh, Tcell)
 start1 = time.time()
@@ -297,8 +310,10 @@ PCE =  0.08320342823723645 VLT =  0.5240058022060908 SHGC =  0.9394718110561349 
 PCE =  0.0823026767378474 VLT =  0.5368890922289812 SHGC =  1.023465230604362 Tcell =  309.82218041481286
 [6.00000000e+03, 1.00000000e-01, 2.50000000e-02, 6.97669968e-01])
 '''
-moopsbrgd
 
+#moopsbrgd
+
+'''
 #Tried to plot the effect of FTO vs TiO2.
 
 #LayersMaterials = [FTO,TiO2]
@@ -323,4 +338,4 @@ ax.set_xlabel('FTO Thick')
 ax.set_ylabel('TiO2 Thick')
 ax.set_zlabel('PCE(x, y)')
 plt.show()
-
+'''

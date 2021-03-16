@@ -243,8 +243,8 @@ AM15 = downloaded_array[1:, [0,2]]
 # print(AM15)
 
     
-Ephotonrr = hPlanck * c0 / lams *1e6 #J #Big to small
-Ephoton = Ephotonrr[::-1]  #small to big
+Ephoton = hPlanck * c0 / lams *1e6 #J #Big to small
+#Ephoton = Ephotonrr[::-1]  #small to big
 E_min = min(Ephoton) #J   energy units from hPlanck
 E_max = max(Ephoton) #J   energy units from hPlanck
 
@@ -297,6 +297,7 @@ def GiveQ(Spectra, eta = 1):#Spectra must be an interpolated function
 '''
 #trapz calcs
 def GiveQ(Spectra, eta = 1):#Spectra must be an array
+        Spectra = Spectra.round(8)
         integrand = eta*Spectra*PowerPerTEA(Ephoton)
         return -np.trapz(integrand, Ephoton)     
 
@@ -329,13 +330,13 @@ def RR0(eta,Absorbed,Tcell):
     Absorbed = Absorbed.round(8)
     integrand = eta * Absorbed * (Ephoton)**2 / (np.exp(Ephoton / (kB * Tcell)) - 1)
     integral = scipy.integrate.trapz(integrand, Ephoton)
-    return ((2 * np.pi) / (c0**2 * hPlanck**3)) * integral
+    return -((2 * np.pi) / (c0**2 * hPlanck**3)) * integral
 #RR0 with trapz gives a significantly different answer than RR0 with quad
 
 def Generated(eta,Absorbed):
     Absorbed = Absorbed.round(8)
     integrand = eta * Absorbed * SPhotonsPerTEA(Ephoton)
-    return np.trapz(integrand, Ephoton)
+    return -np.trapz(integrand, Ephoton)
 
 def Give_Pmp(eta, Absorbed, Rs, Rsh, Tcell, n = 1, Ns = 1):
     data = pvlib.pvsystem.singlediode(Generated(eta, Absorbed)*q, RR0(eta, Absorbed,Tcell)*q, Rs, Rsh, n*Ns*kB*Tcell/q, ivcurve_pnts = 500)
@@ -388,7 +389,7 @@ def max_efficiency(eta,Absorbed,Tcell, solar_constant, Rs, Rsh):
     return Give_Pmp(eta, Absorbed, Rs, Rsh, Tcell) / solar_constant
 
 def GiveImportantInfo(WERT, LayersMaterials,eta,Ti,To,Ui,Uo,Rs,Rsh,solar_constant):
-    
+    EphotoneV= Ephoton*6.242e+18
     NeoThickness = WERT#['x'] 
     layers = GiveLayers(NeoThickness,LayersMaterials)
 
@@ -432,13 +433,13 @@ def GiveImportantInfo(WERT, LayersMaterials,eta,Ti,To,Ui,Uo,Rs,Rsh,solar_constan
     plt.show()
 
     plt.figure()
-    plt.plot(Ephoton, Ts, color='magenta',marker=None,label="$T$")
-    plt.plot(Ephoton, Rfs,color='green',marker=None,label="$R_f$")
-    plt.plot(Ephoton, Rbs,color='purple',marker=None,label="$R_b$")
-    plt.plot(Ephoton, AbsByAbsorbers,color='black',marker=None,label="Abs")
+    plt.plot(EphotoneV, Ts, color='magenta',marker=None,label="$T$")
+    plt.plot(EphotoneV, Rfs,color='green',marker=None,label="$R_f$")
+    plt.plot(EphotoneV, Rbs,color='purple',marker=None,label="$R_b$")
+    plt.plot(EphotoneV, AbsByAbsorbers,color='black',marker=None,label="Abs")
     #plt.plot(Ephoton,tpc.VLTSpectrum(layers).cieplf(lams),color='red',marker=None,label="photopic")
     plt.legend(loc = 'upper right')
-    plt.xlabel('Energy, J')
+    plt.xlabel('Energy, eV')
     plt.show()
 
 
