@@ -21,7 +21,7 @@ assert sys.version_info >= (3,6), 'Requires Python 3.6+'
 import pvlib
 
 from pvlib import pvsystem
-import PVColor as pvc
+import tmmPVColor as pvc
 
 
 # This whole thing uses microns for length
@@ -216,13 +216,22 @@ def GiveMinMaxVLT(AbsorberType, Bounds):
     return {'Material':AbsorberType.__name__,'minVLT':minimum, 'maxVLT':maximum, 'minThick':Bounds[0],
             'maxThick':Bounds[1]}
 
+def GiveMinMaxVLTFromMaterials(LayersMaterials, AbsorberLayer, Bounds):
+    AbsorberType = LayersMaterials[AbsorberLayer-1]
+    minThick = GiveLayers([Bounds[0]], [AbsorberType]) 
+    maxThick = GiveLayers([Bounds[1]], [AbsorberType])
+    minimum = VLT(maxThick)
+    maximum = VLT(minThick)
+    return {'Material':AbsorberType.__name__,'minVLT':minimum, 'maxVLT':maximum, 'minThick':Bounds[0],
+            'maxThick':Bounds[1]}
+
 
 
 # ******************** Here I add PCE calculation *********************#
             
 
 
-worksheet = pandas.read_excel('https://www.nrel.gov/grid/solar-resource/assets/data/astmg173.xls')
+worksheet = pandas.read_excel('/Users/aduell/Desktop/CodeThings/pv-window-bem-master/pv-window-bem-master/Data/ASTMG173.xls')#('https://www.nrel.gov/grid/solar-resource/assets/data/astmg173.xls')
 #worksheet = pandas.read_excel('/Users/lwheeler/Code/pv-window-bem/Data/astmg173.xls')
 downloaded_array = np.array(worksheet)
 
@@ -241,11 +250,11 @@ E_max = max(Ephoton) #J   energy units from hPlanck
 
 # Interpolate to get a continuous function which I will be able to do integrals on:
 
-AM15interp = scipy.interpolate.interp1d(AM15[:,0]/1000, AM15[:,1])#, fill_value="extrapolate")
+AM15interp = scipy.interpolate.interp1d(AM15[:,0]/1000, AM15[:,1])
 #This requires nm scale 300-2500
 
 # Here’s the plot, it looks correct:
-
+'''
 y_values = np.array([AM15interp(x) for x in lams])
 plt.figure()
 plt.plot(lams , y_values)
@@ -253,7 +262,7 @@ plt.xlabel("Wavelength (nm)")
 plt.ylabel("Spectral intensity (W/m$^2$/nm)")
 plt.title("Light from the sun");
 plt.show()
-
+'''
 
 
 
@@ -267,6 +276,8 @@ def Solar_Constant(Ephoton):
     return scipy.integrate.quad(PowerPerTEA,E_min,E_max, full_output=1)[0]
 # quad() is ordinary integration; full_output=1 is (surprisingly) how you hide
 # the messages warning about poor accuracy in integrating.
+
+solar_constant = Solar_Constant(Ephoton)
 
 
 def GivelamsInterp(Parameter):
@@ -282,24 +293,18 @@ def GiveQ(Spectra, eta = 1):#Spectra must be an interpolated function
         def integrand(E):
             return eta * Spectra(E) * PowerPerTEA(E)
         return scipy.integrate.quad(integrand, E_min, E_max, full_output=1)[0]        
-        ''' 
-       def LowerB():
-            return E_min
-        def UpperB():
-            return E_max
-        def integrand(self,E):
-            return eta * Spectra(E) * SPhotonsPerTEA(E)
-        return scipy.integrate.dblquad(integrand, E_min, E_max, LowerB(), UpperB())[0]        
-        '''
+'''
+def GiveQ(Spectra, eta = 1):#Spectra must be an array
+        integrand = eta*Spectra*PowerPerTEA(Ephoton)
+        return -np.trapz(integrand, Ephoton)     
+'''
+
+'''
 def GivePhotons(Spectra, eta):#Spectra must be an interpolated function
-        def LowerB():
-            return E_min
-        def UpperB():
-            return E_max
-        def integrand(self,E):
+        def integrand(E):
             return eta * Spectra(E) * SPhotonsPerTEA(E)
-        return scipy.integrate.dblquad(integrand, E_min, E_max, LowerB(), UpperB())[0]        
-       
+        return scipy.integrate.quad(integrand, E_min, E_max)[0]        
+'''
 # Here I input the spectrum of photons absorbed by the absorber material (Absorbed)
 # and the electron-hole pair extraction efficiency (eta). EQE = eta * Absorbed
 
@@ -309,17 +314,29 @@ def RR0(eta,Absorbed,Tcell):
     return ((2 * np.pi) / (c0**2 * hPlanck**3)) * integral# / 1.60218e-19 #J/eV
 #units = 1/(s*m**2)
 
-
 def Generated(eta,Absorbed):
     integrand = lambda E : eta * Absorbed(E) * SPhotonsPerTEA(E)
 #    integral = scipy.integrate.quad(integrand, E_min, E_max, full_output=1)[0]
     return scipy.integrate.quad(integrand, E_min, E_max, full_output=1)[0]
 #units 1/(s*m**2)
+'''
+#Using trapezoidal rule for integration instaed of quad
+#AbsByAbsorbers is an aray of intensities, not an interpolated function.
+def RR0(eta,Absorbed,Tcell):
+    AbsByAbsorbers = AbsByAbsorbers.round(8)
+    integrand = eta * AbsByAbsorbers * (Ephoton)**2 / (np.exp(Ephoton / (kB * Tcell)) - 1)
+    integral = scipy.integrate.trapz(integrand, Ephoton)
+    return ((2 * np.pi) / (c0**2 * hPlanck**3)) * integral
 
+def Generated(eta,Absorbed):
+    Absorbed = Absorbed.round(8)
+    integrand = eta * Absorbed * SPhotonsPerTEA(Ephoton)
+#    integral = scipy.integrate.quad(integrand, E_min, E_max, full_output=1)[0]
+    return np.trapz(integrand, Ephoton)
+'''
 def Give_Pmp(eta, Absorbed, Rs, Rsh, Tcell, n = 1, Ns = 1):
     data = pvlib.pvsystem.singlediode(Generated(eta, Absorbed)*q, RR0(eta, Absorbed,Tcell)*q, Rs, Rsh, n*Ns*kB*Tcell/q, ivcurve_pnts = 500)
     return data['p_mp']
-
 
 #Calculate equilibrium Tcell
 def TcellCalc(TotalAbs, eta, Ti,To, Absorbed, Ui, Uo, Rs, Rsh):
@@ -388,7 +405,7 @@ def max_efficiency(eta,Absorbed,Tcell, solar_constant, Rs, Rsh):
 
 def GiveImportantInfo(WERT, LayersMaterials,eta,Ti,To,Ui,Uo,Rs,Rsh,solar_constant):
     
-    NeoThickness = WERT['x'] 
+    NeoThickness = WERT#['x'] 
     layers = GiveLayers(NeoThickness,LayersMaterials)
 
     spectra = Spectra(layers ,4)
@@ -415,9 +432,9 @@ def GiveImportantInfo(WERT, LayersMaterials,eta,Ti,To,Ui,Uo,Rs,Rsh,solar_constan
 
 
     #Spectral Curves
-    X = np.transpose([lams,Absorbed])
+    #X = np.transpose([lams,Absorbed])
     #np.savetxt('./Output/AbsByAbsorber.txt',X,delimiter=',',header="wavelength [micron], AbsByAbsorber [1]")
-    Y = np.transpose([lams,Ts,Rfs,Rbs])
+    #Y = np.transpose([lams,Ts,Rfs,Rbs])
     #np.savetxt('./Output/TRfRb.txt',Y,delimiter=',',header="wavelength [micron], T [1], R_f [1], R_b [1]")
     plt.figure()
     plt.plot(lams,Rfs,color='magenta',marker=None,label="$R_f$")
@@ -442,19 +459,20 @@ def GiveImportantInfo(WERT, LayersMaterials,eta,Ti,To,Ui,Uo,Rs,Rsh,solar_constan
     plt.show()
 
 
-
+    '''
     lamsnm = np.array(lams)
     lamsnm*=1000
     spectrumT = np.vstack((lamsnm, Ts)).T
     spectrumRf = np.vstack((lamsnm, Rfs)).T
+    '''
     '''
     plots.spectrum_plot (spectrumRf, 'Rf', 'Rf_Color', 'Wavelength ($nm$)', 'Intensity')
     plt.show()
     plots.spectrum_plot (spectrumT, 'T', 'T_Color', 'Wavelength ($nm$)', 'Intensity')
     plt.show()
     '''
-    pvc.GiveColorSwatch(spectrumRf, spectrumT)
-    pvc.plot_xy_on_fin(spectrumT, spectrumRf)
+    pvc.GiveColorSwatch(Ts, Rfs)
+    pvc.plot_xy_on_fin(Ts, Rfs)
 
 
 

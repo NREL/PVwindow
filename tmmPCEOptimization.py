@@ -23,7 +23,7 @@ from pvlib import pvsystem
 
 import tmmPCECalc as tpc
 from tmmPCECalc import Glass,TiO2, FTO, MAPI,AZO,ITO,ITOlowE,SnO2,SnO2lowE,SnO2lowEfat,SiO2,NiO,Ag,TiO2lowE,TiO2lowEfat,Bleach,ClAlPc,C60,IR,MAPBr,EVA
-import PVColor as pvc
+import tmmPVColor as pvc
 #import tmmPCETemperature as tpt
 from colorpy import plots, ciexyz, colormodels #need to install colorpy to call all packages at once
 import time
@@ -71,6 +71,7 @@ C60Bound = (.100,.400)
 IRBound = (.030, .12)
 MAPBrBound = (.250,1)
 EVABound = (2999,3001)
+#PTAApolymer
 
 #Thicknesses
 GlassTh = 6000
@@ -102,11 +103,11 @@ worksheet = pandas.read_excel('https://www.nrel.gov/grid/solar-resource/assets/d
 downloaded_array = np.array(worksheet)
 AM15 = downloaded_array[1:, [0,2]]
 
-Ephoton = hPlanck * c0 / lams *1e6 #J
-E_min = min(Ephoton) #J   energy units from hPlanck
-E_max = max(Ephoton) #J   energy units from hPlanck
+Ephoton = tpc.Ephoton#hPlanck * c0 / lams *1e6 #J
+#E_min = min(Ephoton) #J   energy units from hPlanck
+#E_max = max(Ephoton) #J   energy units from hPlanck
 
-solar_constant = tpc.Solar_Constant(Ephoton)
+solar_constant = tpc.solar_constant#Solar_Constant(Ephoton)
 #+++++++++Start optimization parts+++++++++++++++++++++++#
 
 #Constraint on VLT
@@ -162,20 +163,8 @@ def GlobalOptimize2(Thickness):
 
 
 
-
-#Thickness = [6000,.05,.25, 0.5]
-#Thickness = [6000,.050,.25,0.8,.050, 0.2]
-#Thickness = [6000,.03,.3,0.5,.069, 0.39]
-#Thickness = [0.02]
-#Thickness = (6000,.250,0.050,0.500,0.070,0.206,3000,6000,0.040,0.022,0.038)
-#Thickness = (6000,.250,0.050,0.500,0.050,0.200,3000,6000,0.030,0.015,0.030)
 Thickness = [GlassTh,FTOTh,TiO2Th,MAPBrTh]#,NiOTh,ITOTh,EVATh,GlassTh,TiO2lowETh,AgTh,TiO2lowETh]
-#Thickness = [MAPBr]
-#LayersMaterials = [FTO]
-#LayersMaterials = [Glass, FTO,TiO2, MAPBr]
-#LayersMaterials = [Glass, FTO,TiO2,MAPBr, NiO, ITO]
 LayersMaterials = [Glass,FTO,TiO2,MAPBr]#,NiO,ITO,EVA,Glass,TiO2lowE,Ag,TiO2lowE]
-#LayersMaterials = [MAPBr]
 #Bounds = GiveBounds(LayersMaterials)
 Boundary = [GlassBound,FTOBound,TiO2Bound,MAPBrBound]#,NiOBound,ITOBound,EVABound,GlassBound,TiO2lowEBound,AgBound,TiO2lowEBound]
 AbsorberLayer = 4
@@ -192,100 +181,26 @@ Uo = 17 #W/(m**2 *K)
 Rtot = 1/Ui
 
 
-minmax = tpc.GiveMinMaxVLT(LayersMaterials[AbsorberLayer-1], AbsorberBoundary)
+minmax = tpc.GiveMinMaxVLTFromMaterials(LayersMaterials,AbsorberLayer, AbsorberBoundary)
 print('VLT range and thicknesses of absorber are',minmax)
 
+#___________________________________Pre Optimization______________________
+layers=tpc.GiveLayers(Thickness,LayersMaterials)
+Spectres = tpc.Spectra(layers, AbsorberLayer)
+As = Spectres['As']
+Absorbed = tpc.GiveEInterp(Spectres['AbsByAbsorbers'])
+TcellPreOp = tpc.TcellCalc(As, eta, Ti,To, Absorbed, Ui, Uo, Rs, Rsh)
+print('Tcell PreOp = ',TcellPreOp)
 
 
-def GiveLayerAbs(Thickness,LayersMaterials):
-    layers = tpc.GiveLayers(Thickness,LayersMaterials)
-    
-    
-    thicks = [tmm.inf]
-    iorcs = ['i']
-    for layer in layers:
-        thicks.append(layer.d)
-        iorcs.append(layer.i_or_c)
-    thicks.append(tmm.inf)
-    iorcs.append('i')
-    
-    #thicks_bw = thicks[::-1]
-    #iorcs_bw = iorcs[::-1]
-
-    
-    
-    x = len(Thickness)
-    AbsLayer = []#np.zeros((x,0))
-    for i in range(x):
-        AbsLayer.append([])
-        for lam in lams:
-            
-            nks = [1]
-            for layer in layers:
-                 nks.append(layer.nk(lam))
-            nks.append(1)
-        
-            #nks_bw = nks[::-1]
-        
-            front_spol = tmm.inc_tmm('s',nks,thicks,iorcs,inc_angle,lam)
-            front_ppol = tmm.inc_tmm('p',nks,thicks,iorcs,inc_angle,lam)
-            #back_spol = tmm.inc_tmm('s',nks_bw,thicks_bw,iorcs_bw,inc_angle,lam)
-            #back_ppol = tmm.inc_tmm('p',nks_bw,thicks_bw,iorcs_bw,inc_angle,lam)
-        
-            AbsLayer_spol = tmm.inc_absorp_in_each_layer(front_spol)[i]
-            AbsLayer_ppol = tmm.inc_absorp_in_each_layer(front_ppol)[i]
-            AbsLayer[-1].append( (AbsLayer_spol + AbsLayer_ppol) / 2. )
-        
+PreOpInfo = tpc.GiveImportantInfo(Thickness, LayersMaterials,eta,Ti,To,Ui,Uo,Rs,Rsh,solar_constant)
+print('PreOp Calculations give',PreOpInfo)
 
 
-    AbsLayer = np.array(AbsLayer)
-    return AbsLayer
 
 
-def qdot(LayersMaterials, Thickness, eta, Tcell):  
-    layerSpectra = GiveLayerAbs(Thickness,LayersMaterials)
-    #layerSpectraInterp = tpc.GiveEInterp(layerSpectra)
-    x = len(Thickness)
-    qList = []
-    for i in range(x):
-        if i == AbsorberLayer-1: #need to fix this to subtract electrical energy from total energy absorbed by absorber to give heat loss only
-            qList.append([])
-            layerSpectraInterp = tpc.GiveEInterp(layerSpectra[i])
-            Qabs = tpc.GiveQ(layerSpectraInterp)#/Thickness[i]
-            Qconv = tpc.Give_Pmp(eta, layerSpectraInterp, Rs, Rsh, Tcell, n = 1, Ns = 1)
-            qList[-1].append((Qabs-Qconv)/Thickness[i])
-        else:
-            qList.append([])
-            layerSpectraInterp = tpc.GiveEInterp(layerSpectra[i])
-            qList[-1].append(tpc.GiveQ(layerSpectraInterp,1)/Thickness[i])
-    return qList
 
-
-def Qdot(LayersMaterials, Thickness):  
-    layerSpectra = GiveLayerAbs(Thickness,LayersMaterials)
-    #layerSpectraInterp = tpc.GiveEInterp(layerSpectra)
-    x = len(Thickness)
-    #QList = []
-    QLayerTot = 0
-    for i in range(x):
-        #QList.append([])
-        layerSpectraInterp = tpc.GiveEInterp(layerSpectra[i])
-        QLayerTot = QLayerTot + (tpc.GiveQ(layerSpectraInterp))
-    return QLayerTot
-
-spectra = tpc.Spectra(tpc.GiveLayers(Thickness, LayersMaterials),4)
-As = spectra['As']
-QAs = tpc.GiveQ(tpc.GiveEInterp(As))
-
-AbsorbanceTest = GiveLayerAbs(Thickness,LayersMaterials)
-dotq = qdot(LayersMaterials,Thickness,eta, 300)
-print(dotq)
-Qdotsum = Qdot(LayersMaterials, Thickness)
-print(Qdotsum) #sum of independent layer absorbances
-print(QAs) #Absorbance of all layers together
-Moopsbrgd
-
-
+#_________________________________Optimization here__________________________
 #tpc.Give_Pmp(eta,Absorbed,Rs,Rsh, Tcell)
 start1 = time.time()
 print('Sim PCE for Optimization =', MediumOptimize(Thickness))
@@ -308,7 +223,8 @@ GlobalTime = (end3-start3)
 print(GlobalWERT)
 print('Time to optimize globally in minutes = ',GlobalTime/60)
 
-#This runs forever. Do not use
+#This runs forever. Do not use--> Messed up VLT range.
+#If VLT Range cannot be reached with absorber type then it will not solve.
 start4 = time.time()
 GlobalWERT2 = GlobalOptimize2(Thickness)
 end4 = time.time()
@@ -316,29 +232,15 @@ GlobalTime2 = (end4-start4)
 print(GlobalWERT2)
 print('Time to optimize globally in minutes = ',GlobalTime2/60)
 '''
-#With 6 layers, dotheoptimize took 57 minutes to complete.No constraint on VLT
-#With 6 layers and tighter bounds, only took 18 minutes. No constraint on VLT.  x: array([6.00000000e+03, 5.19785253e-02, 1.88190522e-01, 6.92350335e-01,5.89070162e-02, 1.15748085e-01])
-#With 6 layers after changing starting values took 23:40. No constraint on VLT x: array([6.00000000e+03, 4.99533492e-02, 2.97889624e-01, 5.04817002e-01,6.91214981e-02, 3.89139617e-01])
-#With 6 layers and reducing number of calculations too 12:50. No Constraint x: array([6.00000000e+03, 5.19785253e-02, 1.88190522e-01, 6.92350335e-01,5.89070162e-02, 1.15748085e-01])
-#Adding decimal places changes the result. 6 layers yadda yadda 11:35 x: array([6.00000000e+03, 4.98528198e-02, 2.61261043e-01, 5.88426467e-01,6.27028296e-02, 1.00000000e-01]
-#With 6 layers after changing starting values +better calcs took 17:24. No constraint on VLT x: array([6.00000000e+03, 4.99533492e-02, 2.97889624e-01, 5.04817002e-01,6.91214981e-02, 3.89139617e-01])
-#With 4 layers and reducing number of caluclations took 6 minutes. No Constraint.
-#With all 11 layers took ~30 minutes.PCE = 0.04282822642972328,nfev: 157, x: array([6.00000000e+03, 1.63842049e-01, 2.50000000e-02, 6.41565714e-01, 7.06368506e-02, 1.76317816e-01, 3.00000000e+03, 6.00000000e+03,4.93834317e-02, 1.49000000e-02, 4.69851778e-02])
-#Tried again w 11 layers. 21 minutes.PCE = .04282822642972328, nfev: 157, x: array([6.00000000e+03, 1.63842049e-01, 2.50000000e-02, 6.41565714e-01, 7.06368506e-02, 1.76317816e-01, 3.00000000e+03, 6.00000000e+03,4.93834317e-02, 1.49000000e-02, 4.69851778e-02])
 
 
-#Tried to plot the effect of FTO vs TiO2.
-#MediumOptimize doesn't work if 2 layers or less
-#Need to add variable to change which layer is the absorber
-#_^ This fixes issue with 2 or fewer layers
-#In SHGC need to figure out what Rtot actually is
 
 
-WERTinfo = tpc.GiveImportantInfo(WERT, LayersMaterials, eta,Ti,To,Ui,Uo,Rs,Rsh,solar_constant)
-#GlobalWERTinfo = tpc.GiveImportantInfo(GlobalWERT, LayersMaterials)
-#GlobalWERTinfo2 = tpc.GiveImportantInfo(GlobalWERT2, LayersMaterials)
+WERTinfo = tpc.GiveImportantInfo(WERT['x'], LayersMaterials, eta,Ti,To,Ui,Uo,Rs,Rsh,solar_constant)
 print('WERTinfo = ', WERTinfo)
+#GlobalWERTinfo = tpc.GiveImportantInfo(GlobalWERT['x'], LayersMaterials)
 #print('GlobalWERTinfo = ', GlobalWERTinfo)
+#GlobalWERTinfo2 = tpc.GiveImportantInfo(GlobalWERT2['x'], LayersMaterials)
 #print('GlobalWERTinfo2 = ', GlobalWERTinfo2)
 
 
@@ -353,72 +255,6 @@ print('BERTinfo = ', BERTinfo)
 print('YERTinfo = ', YERTinfo)
 '''
 
-'''
-NeoThickness = WERT['x'] 
-layers = tpc.GiveLayers(NeoThickness,LayersMaterials)
-
-spectra = tpc.Spectra(layers ,4)
-AbsByAbsorbers = spectra['AbsByAbsorbers']
-Ts = spectra['Ts']
-Rfs = spectra['Rfs']
-Rbs = spectra['Rbs']
-As = spectra['As']
-sanities = spectra['Total']
-Absorbed = tpc.GiveEInterp(AbsByAbsorbers)
-VLT = tpc.VLT(layers)
-Tcell = tpc.TcellCalc(As, Ti,To, eta, Absorbed, Ui, Uo, Rs, Rsh)
-#Absorbed = tpc.GiveEInterp(tpc.Spectra(tpc.GiveLayers(Thickness, LayersMaterials),4)['AbsByAbsorbers'])
-data = tpc.GiveIVData(eta, Absorbed, Rs, Rsh,Tcell, n = 1, Ns = 1)
-SHGC = tpc.SHGC(eta, Ts, Ti, To, Rtot, Tcell, solar_constant, Ui)
-PCE = tpc.max_efficiency(eta,Absorbed,Tcell, solar_constant, Rs, Rsh)
-TimePCE = (end1-start1)
-TimeOptimize = (end2 - start2)
-
-
-#Spectral Curves
-X = np.transpose([lams,Absorbed])
-#np.savetxt('./Output/AbsByAbsorber.txt',X,delimiter=',',header="wavelength [micron], AbsByAbsorber [1]")
-Y = np.transpose([lams,Ts,Rfs,Rbs])
-#np.savetxt('./Output/TRfRb.txt',Y,delimiter=',',header="wavelength [micron], T [1], R_f [1], R_b [1]")
-plt.figure()
-plt.plot(lams,Rfs,color='magenta',marker=None,label="$R_f$")
-plt.plot(lams,Ts,color='green',marker=None,label="$T$")
-plt.plot(lams,Rbs,color='purple',marker=None,label="$R_b$")
-plt.plot(lams,As,color='black',marker=None,label="A")
-plt.plot(lams,AbsByAbsorbers,color='black',linestyle='--',marker=None,label="AbsByAbsorber")
-plt.plot(lams,sanities,color='gold',marker=None,label="R+A+T")
-plt.plot(lams,tpc.VLTSpectrum(layers).cieplf(lams),color='red',marker=None,label="photopic")
-plt.xlabel('wavelength, $\mu$m')
-plt.legend(loc = 'upper right')
-plt.show()
-
-plt.figure()
-plt.plot(Ephoton, Ts, color='magenta',marker=None,label="$T$")
-plt.plot(Ephoton, Rfs,color='green',marker=None,label="$R_f$")
-plt.plot(Ephoton, Rbs,color='purple',marker=None,label="$R_b$")
-plt.plot(Ephoton, AbsByAbsorbers,color='black',marker=None,label="Abs")
-#plt.plot(Ephoton,tpc.VLTSpectrum(layers).cieplf(lams),color='red',marker=None,label="photopic")
-plt.legend(loc = 'upper right')
-plt.xlabel('Energy, J')
-plt.show()
-
-
-
-lamsnm = np.array(lams)
-lamsnm*=1000
-spectrumT = np.vstack((lamsnm, Ts)).T
-spectrumRf = np.vstack((lamsnm, Rfs)).T
-
-pvc.GiveColorSwatch(spectrumRf, spectrumT)
-pvc.plot_xy_on_fin(spectrumT, spectrumRf)
-
-
-
-
-
-print('PCE = ',PCE,'VLT = ', VLT, 'SHGC = ',SHGC, 'Tcell = ',Tcell,'time to calculate PCE from scratch in seconds = ', TimePCE, 'Time to run optimizer in minutes = ',TimeOptimize/60)
-'''
-
 
 '''
 #GLoblawert data
@@ -429,6 +265,8 @@ PCE =  0.0823026767378474 VLT =  0.5368890922289812 SHGC =  1.023465230604362 Tc
 [6.00000000e+03, 1.00000000e-01, 2.50000000e-02, 6.97669968e-01])
 '''
 moopsbrgd
+
+#Tried to plot the effect of FTO vs TiO2.
 
 #LayersMaterials = [FTO,TiO2]
 x = np.linspace(.02, 1,num =100)

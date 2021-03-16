@@ -5,17 +5,25 @@ Created on Thu Mar  4 16:08:09 2021
 @author: aduell
 """
 #import tmm as tmm
+import numpy as np
 import matplotlib.pyplot as plt
 from colorpy import plots, ciexyz, colormodels #need to install colorpy to call all packages at once
+import tmmPCECalc as pce
 # This whole thing uses microns for length
 
-def GiveColorSwatch(spectrumRf, spectrumT):
+'''Gives color swatches of reflected and trsnmitted light based on input of intensity of spectrum'''
+def GiveColorSwatch(T, Rf):
+    lamsnm = np.array(pce.lams)
+    lamsnm*=1000
+    spectrumT = np.vstack((lamsnm, T)).T
+    spectrumRf = np.vstack((lamsnm, Rf)).T
     plots.spectrum_plot (spectrumRf, 'Rf', 'Rf_Color', 'Wavelength ($nm$)', 'Intensity')
     plt.show()
     plots.spectrum_plot (spectrumT, 'T', 'T_Color', 'Wavelength ($nm$)', 'Intensity')
     plt.show()
     return
 
+'''Converts a spectrum (nm vs intenisty) into ciexyz coordinates'''
 def give_xy(spectrum):
     xyz = ciexyz.xyz_from_spectrum(spectrum)
     xyz1 = colormodels.xyz_normalize (xyz)
@@ -23,7 +31,12 @@ def give_xy(spectrum):
     #print(xyz2)
     return(xyz2)
  
-def plot_xy_on_fin(Tspectrum, Rfspectrum):
+'''Plots color as points on the CIE colorchart based intensity of spectra'''
+def plot_xy_on_fin(T, Rf):
+    lamsnm = np.array(pce.lams)
+    lamsnm*=1000
+    Tspectrum = np.vstack((lamsnm, T)).T
+    Rfspectrum = np.vstack((lamsnm, Rf)).T
     xyT = give_xy(Tspectrum)
     xyRf = give_xy(Rfspectrum)
     plots.shark_fin_plot()

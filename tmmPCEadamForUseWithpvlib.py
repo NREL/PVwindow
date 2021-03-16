@@ -22,7 +22,7 @@ import pvlib
 
 from pvlib import pvsystem
 from colorpy import plots, ciexyz, colormodels #need to install colorpy to call all packages at once
-import PVColor as pvc
+import tmmPVColor as pvc
 import tmmPCECalc as tpc
 
 
@@ -167,7 +167,8 @@ def GiveBounds(LayersMaterials):
 #layers = [Glass(),FTO(),TiO2(),MAPBr(),NiO(),ITO(),EVA(),Glass(),TiO2lowE(),Ag(),TiO2lowE()]
 
 
-layers = [Glass(),FTO(),TiO2(),MAPI(),NiO(),ITO(),EVA(),Glass(),TiO2lowE(),Ag(),TiO2lowE()]
+layers = [Glass(),FTO(),TiO2(),MAPI()]#,NiO(),ITO(),EVA(),Glass(),TiO2lowE(),Ag(),TiO2lowE()]
+#layers = [Glass(),FTO(),TiO2(),MAPI(),NiO(),ITO(),EVA(),Glass(),TiO2lowE(),Ag(),TiO2lowE()]
 
 
 # Different thicknesses of MAPI: 50% VLT = 40 nm, 25% VLT = 130 nm, 5% VLT = 370 nm, 0.5% VLT = 775 nm
@@ -282,14 +283,13 @@ Rbs = spectra['Rbs']
 As = spectra['As']
 sanities = spectra['Total']
 
-
+'''
 QAs = tpc.GiveQ(tpc.GiveEInterp(As))
 QTs = tpc.GiveQ(tpc.GiveEInterp(Ts))
 QRfs = tpc.GiveQ(tpc.GiveEInterp(Rfs))
 QRbs = tpc.GiveQ(tpc.GiveEInterp(Rbs))
 print(QAs,QTs,QRfs,QRbs, QAs+QTs+QRfs)
-
-Moopsway
+'''
 
 
 
@@ -303,7 +303,7 @@ plots.spectrum_plot (spectrumRf, 'Rf', 'Rf_Color', 'Wavelength ($nm$)', 'Intensi
 plt.show()
 plots.spectrum_plot (spectrumT, 'T', 'T_Color', 'Wavelength ($nm$)', 'Intensity')
 plt.show()
-pvc.plot_xy_on_fin(spectrumT, spectrumRf)
+pvc.plot_xy_on_fin(Ts, Rfs)
 
 
 
@@ -465,10 +465,10 @@ def GiveEInterp(Parameter):
 
 #λs = np.linspace(λ_min, λ_max, num=500)
 #Abs_values = np.array([AbsInterp(x) for x in λs])
-Abs_values = np.array([GivelamsInterp(AbsByAbsorbers)(x) for x in lams])
+#Abs_values = np.array([GivelamsInterp(AbsByAbsorbers)(x) for x in lams])
 plt.figure()
 #plt.plot(λs, Abs_values )
-plt.plot(lams , Abs_values )
+plt.plot(lams , AbsByAbsorbers.round(8))#Abs_values )
 plt.xlabel("Wavelength (nm)")
 plt.ylabel("Absorptance")
 plt.title("Absorbed in absorber layer");
@@ -512,14 +512,31 @@ def RR0(eta,Absorbed,Tcell):
     return ((2 * np.pi) / (c0**2 * hPlanck**3)) * integral# / 1.60218e-19 #J/eV
 #units = 1/(s*m**2)
 
+def RR0trapz(eta,AbsByAbsorbers,Tcell):
+    AbsByAbsorbers = AbsByAbsorbers.round(8)
+    integrand = eta * AbsByAbsorbers * (Ephoton)**2 / (np.exp(Ephoton / (kB * Tcell)) - 1)
+    integral = scipy.integrate.trapz(integrand, Ephoton)
+    return ((2 * np.pi) / (c0**2 * hPlanck**3)) * integral# / 1.60218e-19 #J/eV
+
+print('RR0', RR0(0.6,Absorbed, 300)) 
+print('RR0Trapz', -RR0trapz(0.6,AbsByAbsorbers,300))
+Mooperty
+print(AbsByAbsorbers)
+print(AbsByAbsorbers.round(6))
 
 def Generated(eta,Absorbed):
     integrand = lambda E : eta * Absorbed(E) * SPhotonsPerTEA(E)
 #    integral = scipy.integrate.quad(integrand, E_min, E_max, full_output=1)[0]
     return scipy.integrate.quad(integrand, E_min, E_max, full_output=1)[0]
 #units 1/(s*m**2)
+def GeneratedTrapz(eta,AbsByAbsorbers):
+    AbsByAbsorbers = AbsByAbsorbers.round(8)
+    integrand = eta * AbsByAbsorbers * SPhotonsPerTEA(Ephoton)
+#    integral = scipy.integrate.quad(integrand, E_min, E_max, full_output=1)[0]
+    return np.trapz(integrand, Ephoton)
 
-
+print('Gen', Generated(0.6,Absorbed)) 
+print('GenTrapz', -GeneratedTrapz(0.6,AbsByAbsorbers))
 #RR = RR0(eta,Absorbed,Tcell)
 #Gen = Generated(eta,Absorbed)
 #print('Gen =', Gen * q,'. Example value is ~2-5')
@@ -578,7 +595,7 @@ def TcellCalc(TotalAbs, Ti,To, eta, Absorbed):
         def UpperB():
             return E_max
         def integrand(self,E):
-            return eta * AbsTotal(E) * SPhotonsPerTEA(E)
+            return AbsTotal(E) * SPhotonsPerTEA(E)
         return scipy.integrate.dblquad(integrand, E_min, E_max, LowerB(), UpperB())[0]        
     Temp = lambda Tcell: (Qabs(eta,AbsTotal) - Give_Pmp(eta,Absorbed,Rs,Rsh, Tcell) + Ui*Ti + Uo*To)/(Ui + Uo)-Tcell
     return scipy.optimize.fsolve(Temp, 300)[0]
@@ -628,7 +645,7 @@ def SHGC(eta, Ts, Ti, To, Rtot, Tcell):
         def UpperB():
             return E_max
         def integrand(self,E):
-            return eta * TransTotal(E) * SPhotonsPerTEA(E)
+            return TransTotal(E) * SPhotonsPerTEA(E)
         return scipy.integrate.dblquad(integrand, E_min, E_max, LowerB(), UpperB())[0]
     return (Qtrans(eta, TransTotal) + Ui*(Tcell-Ti) - ((To-Ti)/Rtot))/solar_constant
 
@@ -642,7 +659,7 @@ def max_efficiency(eta,Absorbed,Tcell):
 print('SHGC = ',SHGC(eta, Ts, Ti, To, 8, Tcell))
 print("PCE =",max_efficiency(eta,Absorbed,Tcell))
 
-
+MoopsNSons
 #+++++++++Start optimization parts+++++++++++++++++++++++#
 
 #Constraint on VLT
