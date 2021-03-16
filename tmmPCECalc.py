@@ -294,6 +294,7 @@ def GiveQ(Spectra, eta = 1):#Spectra must be an interpolated function
             return eta * Spectra(E) * PowerPerTEA(E)
         return scipy.integrate.quad(integrand, E_min, E_max, full_output=1)[0]        
 '''
+#trapz calcs
 def GiveQ(Spectra, eta = 1):#Spectra must be an array
         integrand = eta*Spectra*PowerPerTEA(Ephoton)
         return -np.trapz(integrand, Ephoton)     
