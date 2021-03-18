@@ -141,6 +141,12 @@ def GiveLayerAbs(Thickness,LayersMaterials):
     return AbsLayer
 
 
+
+#Energy statement for finding qloss
+#d/dx(k*dT/dx)=qabs-qconv=qloss
+#boundaries T(xL)=TL, T(xR)=TR
+
+
 def qdot(LayersMaterials, Thickness, eta, TList, AbsorberLayer):  
     layerSpectra = GiveLayerAbs(Thickness,LayersMaterials)
     #layerSpectraInterp = tpc.GiveEInterp(layerSpectra)
@@ -148,22 +154,20 @@ def qdot(LayersMaterials, Thickness, eta, TList, AbsorberLayer):
     #Something like Integral(T(x)) from L1 to L2. Ts1 = AbsorberLayer-2 and Ts2 = absorberlayer-1
     TAbsorber = TList[AbsorberLayer-1]
     x = len(Thickness)
-    ThickSum = 0
-    for j in range(x):
-        ThickSum = ThickSum + Thickness[j]
+    
     qList = []
     for i in range(x):
         if i == AbsorberLayer-1: #done --> need to fix this to subtract electrical energy from total energy absorbed by absorber to give heat loss only
             #qList.append([])
             layerSpectraInterp = tpc.GiveEInterp(layerSpectra[i])
-            Qabs = tpc.GiveQ(layerSpectraInterp)#/Thickness[i]
-            Qconv = tpc.Give_Pmp(eta, layerSpectraInterp, Rs, Rsh, TAbsorber, n = 1, Ns = 1)
-            qList.append((Qabs-Qconv)/ThickSum)#Thickness[i])
+            qabs = tpc.GiveQ(layerSpectraInterp)/Thickness[i]
+            qconv = (tpc.Give_Pmp(eta, layerSpectraInterp, Rs, Rsh, TAbsorber, n = 1, Ns = 1)/Thickness[i])
+            qList.append((qabs-qconv))#/ThickSum)#Thickness[i])
             #qList[-1].append((Qabs-Qconv)/Thickness[i])
         else:
             #qList.append([])
             layerSpectraInterp = tpc.GiveEInterp(layerSpectra[i])
-            qList.append(tpc.GiveQ(layerSpectraInterp)/ThickSum)#/Thickness[i])
+            qList.append(tpc.GiveQ(layerSpectraInterp)/Thickness[i])
             #qList[-1].append(tpc.GiveQ(layerSpectraInterp,1)/Thickness[i])
     return qList
 
@@ -235,25 +239,27 @@ def InterfaceTemp(Thick, qdot, Ts1, Ts2, k):
     #return qdot(layer, Thick,eta,Tcell,AbsorberLayer)*Thick**2/(2*k)+(Ts1+Ts2)/2
     return qdot*Thick**2/(2*k)+(Ts1+Ts2)/2
    
-    
-#ST = SurfaceTemp([Glass], 300, [6000],300, 5)
-#print(ST)
-
+''' 
 layerSpectra = GiveLayerAbs(Thickness,LayersMaterials)
 layer1 = tpc.GiveEInterp(layerSpectra[0])
 layer2 = tpc.GiveEInterp(layerSpectra[1])
 layer3 = tpc.GiveEInterp(layerSpectra[2])
 layer4 = tpc.GiveEInterp(layerSpectra[3])
+
+layerSpectraInterp = tpc.GiveEInterp(layerSpectra[3])
+Qabs = tpc.GiveQ(layerSpectraInterp)
+Qconv = tpc.Give_Pmp(eta, layerSpectraInterp, Rs, Rsh, TcellAbsorber, n = 1, Ns = 1)
+layer4true = Qabs-Qconv
 q1 = tpc.GiveQ(layer1,1)/Thickness[0]
 q2 = tpc.GiveQ(layer2,1)/Thickness[1]
 q3 = tpc.GiveQ(layer3,1)/Thickness[2]
-q4 = tpc.GiveQ(layer4,1)/Thickness[3]
+q4 = layer4true/Thickness[3]
 qSum = (q1+q2+q3+q4)
 
 Q1 = tpc.GiveQ(layer1,1)
 Q2 = tpc.GiveQ(layer2,1)
 Q3 = tpc.GiveQ(layer3,1)
-Q4 = tpc.GiveQ(layer4,1)
+Q4 = layer4true
 qSum2 = (Q1+Q2+Q3+Q4)/(Thickness[0]+Thickness[1]+Thickness[2]+Thickness[3])
 
 qdotsum = qdotSum(LayersMaterials,Thickness,eta, 309, AbsorberLayer)
@@ -267,14 +273,18 @@ qAs = tpc.GiveQ(tpc.GiveEInterp(As))/(GlassTh+FTOTh+TiO2Th+MAPBrTh)
 
 
 AbsorbanceTest = GiveLayerAbs(Thickness,LayersMaterials)
+'''
 dotq = qdot(LayersMaterials,Thickness,eta, TList, AbsorberLayer)
+'''
 print('small q sum from qdot function',(dotq[0]+dotq[1]+dotq[2]+dotq[3]))
+ProperSum = (dotq[0]*Thickness[0]+dotq[1]*Thickness[1]+dotq[2]*Thickness[2]+dotq[3]*Thickness[3])/(Thickness[0]+Thickness[1]+Thickness[2]+Thickness[3])
+
 print('using qdot function',dotq)
+print('Proper Sum', ProperSum, 'Should be about the same as qsum2')
 #Qdotsum = Qdot(LayersMaterials, Thickness)
 #print(Qdotsum) #sum of independent layer absorbances
 print('q for full stack',qAs) #Absorbance of all layers together
-
-
+'''
 '''
 plt.figure()
 plt.plot(tpc.Ephoton, layer1(tpc.Ephoton),color='gray', label = 'layer1')
@@ -290,7 +300,7 @@ plt.ylabel("Intensity")
 plt.title("Absorbance")
 plt.legend(loc = 'upper left')
 plt.show()
-'''
+
 
 ST1 = SurfaceTemp(Ti,q1, Thickness[0], 12)
 ST2 = SurfaceTemp(Ti,q2, Thickness[1], 12)
@@ -302,7 +312,7 @@ print('surface temp test calcs',ST1,ST2,ST3,ST4)
 
 #Moopsbrgd
 
-    
+'''
     
     
 #Need special equation for absorber layer in terms of qdot.
@@ -376,4 +386,93 @@ end1 = time.time()
 print('result is',Result)
 print('Time to solve in seconds = ',end1-start1)
 print('Time to solve in minutes = ',(end1-start1)/60)
+
+
+Plotting
+
+#__________________________________Plotting________________________
+
+
+
+def LayerTempDist(Thick, x, qdot, Ts1, Ts2, k):
+    #LTD = []
+    
+    #x=x[0]
+    #for i in range(len(x)):
+        #LTD.append(qdot*Thick**2/(2*k))*(1-(x[i]**2/Thick**2)) + ((Ts2-Ts1)/2)*(x[i]/Thick) + (Ts1+Ts2)/2
+    LTD = (qdot*Thick**2/(2*k))*(1-(x**2/Thick**2)) + ((Ts2-Ts1)/2)*(x/Thick) + (Ts1+Ts2)/2
+
+    return LTD
+
+def GiveZ(Thickness):
+     x = len(Thickness)
+     z=[]
+     Distance = 0
+     for j in range(x):
+        #Thickness[j] = Thickness[j]/Thickness[j]
+        if j==0:
+            z.append([])
+            z[-1].append(np.linspace(0,Thickness[j], num = 100))
+            #Distance = Distance+Thickness[j]
+        else:
+            z.append([])
+            z[-1].append(np.linspace(Distance,Distance+Thickness[j], num = 100))
+            #Distance = Distance+Thickness[j]    
+        Distance = Distance+Thickness[j]
+     return z
+def GiveTSList4Plot(eta, Thickness, LayersMaterials, Ti, To, TList, AbsorberLayer, h,k):#List of surface temp calcs for solving
+    W = len(LayersMaterials)
+    if W == len(Thickness):
+        #Figure out h or soemthing
+        TDistList = []
+        z=GiveZ(Thickness)
+        qdots = qdot(LayersMaterials,Thickness,eta,TList,AbsorberLayer)
+        '''
+        ThickSum=0
+        for Y in range(W):
+            ThickSum = ThickSum + Thickness[Y]
+        '''
+        #for j in range(x):
+        #    z.append(np.linspace(Thickness[j],Thickness[j-1],num = (Thickness[j-1]-Thickness[j])*100))
+        for i in range(W): 
+            #Thickness[i] = Thickness[i]/Thickness[i]
+            TDistList.append([])
+            TDistList[-1].append(LayerTempDist(Thickness[i], z[i][0], qdots[i], TList[i], TList[i+1],k))
+        return TDistList
+    else:  
+        raise ValueError ('layers and Thickness lengths do not match')
+
+NeoTList = Result
+start2 = time.time()
+PlotResult = GiveTSList4Plot(eta, Thickness, LayersMaterials, Ti, To, NeoTList, AbsorberLayer, h,k)
+end2 = time.time()  
+z = GiveZ(Thickness)
+
+z1 = z[0]
+z2=z1[0]
+z3=z2[1]
+x=z
+
+ThickSum = Thickness[0]+Thickness[1]+Thickness[2]+Thickness[3]
+FixME =LayerTempDist(Thickness[1], z[1][0], dotq[1], 300, 300, 1)
+#print('LayerTempDIst sample',FixME)
+
+
+
+
+#print('Temp Dist is',PlotResult)
+print('Time to solve in seconds = ',end2-start2)
+print('Time to solve in minutes = ',(end2-start2)/60)
+#print('z is',z)
+
+plt.figure()
+plt.plot(z[0][0],PlotResult[0][0],color='magenta',marker=None,label="$TempDist$")
+plt.plot(z[1][0],PlotResult[1][0],color='gold',marker=None,label="$TempDist$")
+plt.plot(z[2][0],PlotResult[2][0],color='red',marker=None,label="$TempDist$")
+plt.plot(z[3][0],PlotResult[3][0],color='blue',marker=None,label="$TempDist$")
+plt.xlabel('Thickness (um), $\mu$m')
+plt.ylabel('Temperature (K), $\mu$m')
+plt.legend(loc = 'upper right')
+plt.show()
+
 

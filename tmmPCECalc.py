@@ -242,7 +242,7 @@ AM15 = downloaded_array[1:, [0,2]]
 # The last line should be 4000.0, 7.1043E-03
 # print(AM15)
 
-    
+
 Ephoton = hPlanck * c0 / lams *1e6 #J
 E_min = min(Ephoton) #J   energy units from hPlanck
 E_max = max(Ephoton) #J   energy units from hPlanck
