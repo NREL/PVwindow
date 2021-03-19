@@ -404,11 +404,11 @@ def max_efficiency(eta,Absorbed,Tcell, solar_constant, Rs, Rsh):
     #Tcell = TcellCalc(As,Ti,To,eta,Absorbed)
     return Give_Pmp(eta, Absorbed, Rs, Rsh, Tcell) / solar_constant
 
-def GiveImportantInfo(WERT, LayersMaterials,eta,Ti,To,Ui,Uo,Rs,Rsh,solar_constant):
+def GiveImportantInfo(Thickness, LayersMaterials,eta,Ti,To,Ui,Uo,Rs,Rsh,solar_constant):
     
-    NeoThickness = WERT#['x'] 
-    layers = GiveLayers(NeoThickness,LayersMaterials)
-
+    
+    layers = GiveLayers(Thickness,LayersMaterials)
+    
     spectra = Spectra(layers ,4)
     AbsByAbsorbers = spectra['AbsByAbsorbers']
     Ts = spectra['Ts']
@@ -448,7 +448,8 @@ def GiveImportantInfo(WERT, LayersMaterials,eta,Ti,To,Ui,Uo,Rs,Rsh,solar_constan
     plt.xlabel('wavelength, $\mu$m')
     plt.legend(loc = 'upper right')
     plt.show()
-
+    
+    #EphotoneV = Ephoton*6.242e+18 
     plt.figure()
     plt.plot(Ephoton, Ts, color='magenta',marker=None,label="$T$")
     plt.plot(Ephoton, Rfs,color='green',marker=None,label="$R_f$")

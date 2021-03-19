@@ -24,7 +24,7 @@ from pvlib import pvsystem
 from colorpy import plots, ciexyz, colormodels #need to install colorpy to call all packages at once
 import tmmPVColor as pvc
 import tmmPCECalc as tpc
-
+import time
 
 #import numericalunits
 #help(numericalunits)
@@ -164,10 +164,10 @@ def GiveBounds(LayersMaterials):
 #layers = [Glass,FTO,TiO2,C60,ClAlPc,NiO,ITO,EVA,Glass,TiO2lowE,Ag,TiO2lowE]
 
 # 50% VLT with non-wavelength-selective absorber, MAPbBr3 = 500 nm
-#layers = [Glass(),FTO(),TiO2(),MAPBr(),NiO(),ITO(),EVA(),Glass(),TiO2lowE(),Ag(),TiO2lowE()]
+layers = [Glass(),FTO(),TiO2(),MAPBr(),NiO(),ITO(),EVA(),Glass(),TiO2lowE(),Ag(),TiO2lowE()]
 
 
-layers = [Glass(),FTO(),TiO2(),MAPI()]#,NiO(),ITO(),EVA(),Glass(),TiO2lowE(),Ag(),TiO2lowE()]
+#layers = [Glass(),FTO(),TiO2(),MAPI()]#,NiO(),ITO(),EVA(),Glass(),TiO2lowE(),Ag(),TiO2lowE()]
 #layers = [Glass(),FTO(),TiO2(),MAPI(),NiO(),ITO(),EVA(),Glass(),TiO2lowE(),Ag(),TiO2lowE()]
 
 
@@ -517,13 +517,13 @@ def RR0trapz(eta,AbsByAbsorbers,Tcell):
     integrand = eta * AbsByAbsorbers * (Ephoton)**2 / (np.exp(Ephoton / (kB * Tcell)) - 1)
     integral = scipy.integrate.trapz(integrand, Ephoton)
     return ((2 * np.pi) / (c0**2 * hPlanck**3)) * integral# / 1.60218e-19 #J/eV
-
+'''
 print('RR0', RR0(0.6,Absorbed, 300)) 
 print('RR0Trapz', -RR0trapz(0.6,AbsByAbsorbers,300))
-Mooperty
+#Mooperty
 print(AbsByAbsorbers)
 print(AbsByAbsorbers.round(6))
-
+'''
 def Generated(eta,Absorbed):
     integrand = lambda E : eta * Absorbed(E) * SPhotonsPerTEA(E)
 #    integral = scipy.integrate.quad(integrand, E_min, E_max, full_output=1)[0]
@@ -534,9 +534,10 @@ def GeneratedTrapz(eta,AbsByAbsorbers):
     integrand = eta * AbsByAbsorbers * SPhotonsPerTEA(Ephoton)
 #    integral = scipy.integrate.quad(integrand, E_min, E_max, full_output=1)[0]
     return np.trapz(integrand, Ephoton)
-
+'''
 print('Gen', Generated(0.6,Absorbed)) 
 print('GenTrapz', -GeneratedTrapz(0.6,AbsByAbsorbers))
+'''
 #RR = RR0(eta,Absorbed,Tcell)
 #Gen = Generated(eta,Absorbed)
 #print('Gen =', Gen * q,'. Example value is ~2-5')
@@ -659,7 +660,7 @@ def max_efficiency(eta,Absorbed,Tcell):
 print('SHGC = ',SHGC(eta, Ts, Ti, To, 8, Tcell))
 print("PCE =",max_efficiency(eta,Absorbed,Tcell))
 
-MoopsNSons
+#MoopsNSons
 #+++++++++Start optimization parts+++++++++++++++++++++++#
 
 #Constraint on VLT
@@ -702,7 +703,10 @@ Thickness = (6000,.250,0.050,0.500,0.050,0.200,3000,6000,0.030,0.015,0.030)
 LayersMaterials = [Glass,FTO,TiO2,MAPBr,NiO,ITO,EVA,Glass,TiO2lowE,Ag,TiO2lowE]
 #Bounds = GiveBounds(LayersMaterials)
 print('Sim PCE for Optimization =',MediumOptimize(Thickness))
+start = time.time
 WERT = dotheoptimize(Thickness)
+end = time.time
+print('Time to optimize in minutes = ',(end-start)/60)
 print(WERT)
 print('VLT = ',VLTconstraint(WERT['x'])+.5)
 #print(WERT['x'])

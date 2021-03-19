@@ -103,11 +103,11 @@ worksheet = pandas.read_excel('https://www.nrel.gov/grid/solar-resource/assets/d
 downloaded_array = np.array(worksheet)
 AM15 = downloaded_array[1:, [0,2]]
 
-Ephoton = tpc.Ephoton#hPlanck * c0 / lams *1e6 #J
+Ephoton = hPlanck * c0 / lams *1e6 #J tpc.Ephoton#
 #E_min = min(Ephoton) #J   energy units from hPlanck
 #E_max = max(Ephoton) #J   energy units from hPlanck
 
-solar_constant = tpc.solar_constant#Solar_Constant(Ephoton)
+solar_constant = tpc.Solar_Constant(Ephoton)#tp.solar_constant
 #+++++++++Start optimization parts+++++++++++++++++++++++#
 
 #Constraint on VLT
@@ -132,7 +132,7 @@ def dotheoptimize(Thickness):
     func_to_minimize = lambda x : -MediumOptimize(x)
     #bnd = scipy.optimize.Bounds(.02, .1, keep_feasible=False)#If testing a single layer use this line
     #return scipy.optimize.minimize(func_to_minimize, Thickness,method='SLSQP',bounds = bnd )
-    return scipy.optimize.minimize(func_to_minimize, Thickness,method='SLSQP', bounds = Boundary, constraints = (VLTc), options={'ftol': 1e-06, 'eps': 1.4901161193847656e-08})#, 'finite_diff_rel_step': None})
+    return scipy.optimize.minimize(func_to_minimize, Thickness,method='SLSQP', bounds = Boundary, constraints = (VLTc))#, options={'ftol': 1e-06, 'eps': 1.4901161193847656e-08})#, 'finite_diff_rel_step': None})
 
 def TotalOptimize(eta, Thickness, LayersMaterials, Boundaries, AbsorberLayer, Ti = 300, To = 300, Ui = 8.3, Uo = 17, Rs = .02, Rsh = 1000, n = 1, Ns = 1):
     AbsorberLayer = AbsorberLayer
@@ -165,10 +165,10 @@ def GlobalOptimize2(Thickness):
 
 
 
-Thickness = [GlassTh,FTOTh,TiO2Th,MAPBrTh]#,NiOTh,ITOTh,EVATh,GlassTh,TiO2lowETh,AgTh,TiO2lowETh]
-LayersMaterials = [Glass,FTO,TiO2,MAPBr]#,NiO,ITO,EVA,Glass,TiO2lowE,Ag,TiO2lowE]
+Thickness = [GlassTh,FTOTh,TiO2Th,MAPBrTh,NiOTh,ITOTh,EVATh,GlassTh,TiO2lowETh,AgTh,TiO2lowETh]
+LayersMaterials = [Glass,FTO,TiO2,MAPBr,NiO,ITO,EVA,Glass,TiO2lowE,Ag,TiO2lowE]
 #Bounds = GiveBounds(LayersMaterials)
-Boundary = [GlassBound,FTOBound,TiO2Bound,MAPBrBound]#,NiOBound,ITOBound,EVABound,GlassBound,TiO2lowEBound,AgBound,TiO2lowEBound]
+Boundary = [GlassBound,FTOBound,TiO2Bound,MAPBrBound,NiOBound,ITOBound,EVABound,GlassBound,TiO2lowEBound,AgBound,TiO2lowEBound]
 AbsorberLayer = 4
 AbsorberBoundary = MAPBrBound
 Rs = .002 #* ohm #series resistance
@@ -181,35 +181,38 @@ To = 300
 Ui = 8.3 #W/(m**2 *K) 
 Uo = 17 #W/(m**2 *K)
 Rtot = 1/Ui
-
+'''
 layers = tpc.GiveLayers(Thickness,LayersMaterials)
 spectres = tpc.Spectra(layers,AbsorberLayer)
 Absorbed = tpc.GiveEInterp(spectres['AbsByAbsorbers'])
-
-
+'''
+'''
 RR0 = tpc.RR0(eta,Absorbed,300)
 gen = tpc.Generated(eta,Absorbed)
 Q = tpc.GiveQ(Absorbed)
 print('RR0 = ',RR0)
 print('gen = ',gen)
 print('Q = ',Q)
-
+'''
 
 
 minmax = tpc.GiveMinMaxVLTFromMaterials(LayersMaterials,AbsorberLayer, AbsorberBoundary)
 print('VLT range and thicknesses of absorber are',minmax)
 
 #___________________________________Pre Optimization______________________
+'''
 layers=tpc.GiveLayers(Thickness,LayersMaterials)
 Spectres = tpc.Spectra(layers, AbsorberLayer)
 As = Spectres['As']
 Absorbed = tpc.GiveEInterp(Spectres['AbsByAbsorbers'])
+start0 = time.time()
 TcellPreOp = tpc.TcellCalc(As, eta, Ti,To, Absorbed, Ui, Uo, Rs, Rsh)
+end0 = time.time()
 print('Tcell PreOp = ',TcellPreOp)
-
-
+print('TIme to calculate Tcell in sec = ', end0-start0)
+'''
 PreOpInfo = tpc.GiveImportantInfo(Thickness, LayersMaterials,eta,Ti,To,Ui,Uo,Rs,Rsh,solar_constant)
-print('PreOp Calculations give',PreOpInfo)
+#print('PreOp Calculations give',PreOpInfo)
 
 
 
@@ -220,11 +223,13 @@ print('PreOp Calculations give',PreOpInfo)
 start1 = time.time()
 print('Sim PCE for Optimization =', MediumOptimize(Thickness))
 end1 = time.time()
+TimePCE = (end1-start1)
+print('Time to calculate PCE in sec', TimePCE)
 start2 = time.time()
 WERT = dotheoptimize(Thickness)
 end2 = time.time()
 print(WERT)
-TimePCE = (end1-start1)
+#TimePCE = (end1-start1)
 TimeOptimize = (end2 - start2)
 print('time to calculate PCE from scratch in seconds = ', TimePCE, 'Time to run optimizer in minutes = ',TimeOptimize/60)
 #print('VLT = ',VLTconstraint(WERT['x'])+.5)
@@ -280,7 +285,7 @@ PCE =  0.0823026767378474 VLT =  0.5368890922289812 SHGC =  1.023465230604362 Tc
 [6.00000000e+03, 1.00000000e-01, 2.50000000e-02, 6.97669968e-01])
 '''
 
-moopsbrgd
+#moopsbrgd
 
 '''
 #Tried to plot the effect of FTO vs TiO2.
