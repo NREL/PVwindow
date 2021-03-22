@@ -384,7 +384,7 @@ def GiveIVData(eta, Absorbed, Rs, Rsh,Tcell, n = 1, Ns = 1):
 
 
 
-def SHGC(Ts, Ti, To, Tcell, solar_constant, Ui):
+def SHGC(Ts, Ti, To, Tcell, Ui):
     #Tcell = TcellCalc(As,Ti,To,eta,Absorbed)
     Rtot = 1/Ui #This is approximate because Ui is assumed
     #Included in GiveQ for simplicity but should not be used for calculating SHGC
@@ -400,11 +400,11 @@ def SHGC(Ts, Ti, To, Tcell, solar_constant, Ui):
     #    return scipy.integrate.dblquad(integrand, E_min, E_max, LowerB(), UpperB())[0]
     return (Qtrans + Ui*(Tcell-Ti) - ((To-Ti)/Rtot))/solar_constant
 
-def max_efficiency(eta,Absorbed,Tcell, solar_constant, Rs, Rsh):
+def max_efficiency(eta,Absorbed,Tcell, Rs, Rsh):
     #Tcell = TcellCalc(As,Ti,To,eta,Absorbed)
     return Give_Pmp(eta, Absorbed, Rs, Rsh, Tcell) / solar_constant
 
-def GiveImportantInfo(Thickness, LayersMaterials,eta,Ti,To,Ui,Uo,Rs,Rsh,solar_constant):
+def GiveImportantInfo(Thickness, LayersMaterials,eta,Ti,To,Ui,Uo,Rs,Rsh):
     
     
     layers = GiveLayers(Thickness,LayersMaterials)
@@ -426,8 +426,8 @@ def GiveImportantInfo(Thickness, LayersMaterials,eta,Ti,To,Ui,Uo,Rs,Rsh,solar_co
     Imp = data['i_mp']
     Vmp = data['v_mp']
     Pmp = data['p_mp']
-    SHGCcalc = SHGC(Ts, Ti, To, Tcell, solar_constant, Ui)
-    PCE = max_efficiency(eta,Absorbed,Tcell, solar_constant, Rs, Rsh)
+    SHGCcalc = SHGC(Ts, Ti, To, Tcell, Ui)
+    PCE = max_efficiency(eta,Absorbed,Tcell, Rs, Rsh)
     #TimePCE = (end1-start1)
     #TimeOptimize = (end2 - start2)
 

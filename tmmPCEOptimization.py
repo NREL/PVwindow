@@ -99,15 +99,15 @@ EVATh = 3000
 
 
 
-worksheet = pandas.read_excel('https://www.nrel.gov/grid/solar-resource/assets/data/astmg173.xls')
-downloaded_array = np.array(worksheet)
-AM15 = downloaded_array[1:, [0,2]]
+#worksheet = pandas.read_excel('https://www.nrel.gov/grid/solar-resource/assets/data/astmg173.xls')
+#downloaded_array = np.array(worksheet)
+#AM15 = downloaded_array[1:, [0,2]]
 
-Ephoton = hPlanck * c0 / lams *1e6 #J tpc.Ephoton#
+#Ephoton = hPlanck * c0 / lams *1e6 #J tpc.Ephoton#
 #E_min = min(Ephoton) #J   energy units from hPlanck
 #E_max = max(Ephoton) #J   energy units from hPlanck
 
-solar_constant = tpc.Solar_Constant(Ephoton)#tp.solar_constant
+#solar_constant = tpc.Solar_Constant(Ephoton)#tpc.solar_constant
 #+++++++++Start optimization parts+++++++++++++++++++++++#
 
 #Constraint on VLT
@@ -125,7 +125,7 @@ def MediumOptimize(Thickness):
     SpectraCurves = tpc.Spectra(layers,AbsorberLayer)
     Absorbed = tpc.GiveEInterp(SpectraCurves['AbsByAbsorbers'])
     Tcell = tpc.TcellCalc(SpectraCurves['As'],eta, Ti,To,Absorbed,Ui, Uo, Rs, Rsh)
-    return tpc.max_efficiency(eta,Absorbed,Tcell, solar_constant, Rs, Rsh)
+    return tpc.max_efficiency(eta,Absorbed,Tcell, Rs, Rsh)
 
 def dotheoptimize(Thickness):
     #layerss = GiveLayers(Thicknesses, Glass,FTO,TiO2)
@@ -147,8 +147,9 @@ def TotalOptimize(eta, Thickness, LayersMaterials, Boundaries, AbsorberLayer, Ti
     Uo = Uo
     return dotheoptimize(Thickness)
 
+'''
+#___________________________Global Optimization______________________________
 
-#Global Min
 def VLTGconstraint(Thickness):
     layers = tpc.GiveLayers(Thickness, LayersMaterials)
     VLTstack=Stack(layers)
@@ -162,7 +163,7 @@ def GlobalOptimize(Thickness):
 def GlobalOptimize2(Thickness):
     func_to_minimize = lambda x : -MediumOptimize(x)
     return scipy.optimize.dual_annealing(func_to_minimize, bounds = Boundary)
-
+'''
 
 
 Thickness = [GlassTh,FTOTh,TiO2Th,MAPBrTh,NiOTh,ITOTh,EVATh,GlassTh,TiO2lowETh,AgTh,TiO2lowETh]
@@ -181,6 +182,16 @@ To = 300
 Ui = 8.3 #W/(m**2 *K) 
 Uo = 17 #W/(m**2 *K)
 Rtot = 1/Ui
+
+
+#6 layers.time to calculate PCE from scratch in seconds =  8.253074884414673 Time to run optimizer in minutes =  10.35908164183298. nfev: 49
+#8 layers.time to calculate PCE from scratch in seconds =  5.444987773895264 Time to run optimizer in minutes =  12.90131440560023. nfev: 81
+#10 layers seemed to freeze up
+#9 Layers also seems to stop. Suspect is TiO2LowE
+#all1 layers. Actually worked this time. time to calculate PCE from scratch in seconds =  7.389192342758179 Time to run optimizer in minutes =  46.965387948354085.nfev: 234.  x: array([6.00001240e+03, 1.00000000e-01, 2.50000000e-02, 1.00000000e+00, 4.55586054e-02, 1.00629629e-01, 2.99982870e+03, 5.99995192e+03,1.50000241e-02, 1.51000000e-02, 1.50000000e-02])
+#11 layes 6.42 seconds for PCE. After 2 hours still no result.
+
+
 '''
 layers = tpc.GiveLayers(Thickness,LayersMaterials)
 spectres = tpc.Spectra(layers,AbsorberLayer)
@@ -196,8 +207,7 @@ print('Q = ',Q)
 '''
 
 
-minmax = tpc.GiveMinMaxVLTFromMaterials(LayersMaterials,AbsorberLayer, AbsorberBoundary)
-print('VLT range and thicknesses of absorber are',minmax)
+
 
 #___________________________________Pre Optimization______________________
 '''
@@ -211,7 +221,11 @@ end0 = time.time()
 print('Tcell PreOp = ',TcellPreOp)
 print('TIme to calculate Tcell in sec = ', end0-start0)
 '''
-PreOpInfo = tpc.GiveImportantInfo(Thickness, LayersMaterials,eta,Ti,To,Ui,Uo,Rs,Rsh,solar_constant)
+
+minmax = tpc.GiveMinMaxVLTFromMaterials(LayersMaterials,AbsorberLayer, AbsorberBoundary)
+print('VLT range and thicknesses of absorber are',minmax)
+
+PreOpInfo = tpc.GiveImportantInfo(Thickness, LayersMaterials,eta,Ti,To,Ui,Uo,Rs,Rsh)
 #print('PreOp Calculations give',PreOpInfo)
 
 
@@ -235,6 +249,11 @@ print('time to calculate PCE from scratch in seconds = ', TimePCE, 'Time to run 
 #print('VLT = ',VLTconstraint(WERT['x'])+.5)
 #WERT2 = TotalOptimize(eta, Thickness, LayersMaterials, AbsorberLayer, Boundary, Ti = 300, To = 300, Ui = 8.3, Uo = 17, Rs = .02, Rsh = 100, n = 1, Ns = 1)
 #print(WERT2)
+
+WERTinfo = tpc.GiveImportantInfo(WERT['x'], LayersMaterials, eta,Ti,To,Ui,Uo,Rs,Rsh)
+print('WERTinfo = ', WERTinfo)
+
+
 '''
 start3 = time.time()
 GlobalWERT = GlobalOptimize(Thickness)
@@ -256,8 +275,7 @@ print('Time to optimize globally in minutes = ',GlobalTime2/60)
 
 
 
-WERTinfo = tpc.GiveImportantInfo(WERT['x'], LayersMaterials, eta,Ti,To,Ui,Uo,Rs,Rsh,solar_constant)
-print('WERTinfo = ', WERTinfo)
+
 #GlobalWERTinfo = tpc.GiveImportantInfo(GlobalWERT['x'], LayersMaterials)
 #print('GlobalWERTinfo = ', GlobalWERTinfo)
 #GlobalWERTinfo2 = tpc.GiveImportantInfo(GlobalWERT2['x'], LayersMaterials)
@@ -267,10 +285,10 @@ print('WERTinfo = ', WERTinfo)
 '''
 #calculated using regular minimization
 BERT = {'x':[6.00000000e+03, 1.00000000e-01, 8.87880248e-02, 7.81564055e-01]}
-BERTinfo = tpc.GiveImportantInfo(BERT, LayersMaterials,eta,Ti,To,Ui,Uo,Rs,Rsh,solar_constant)
+BERTinfo = tpc.GiveImportantInfo(BERT, LayersMaterials,eta,Ti,To,Ui,Uo,Rs,Rsh)
 #calculated using global optimizer differential evolution
 YERT = {'x':[5.99992328e+03, 1.00000000e-01, 3.44122617e-02, 9.00000000e-01]}
-YERTinfo = tpc.GiveImportantInfo(YERT, LayersMaterials,eta,Ti,To,Ui,Uo,Rs,Rsh,solar_constant)
+YERTinfo = tpc.GiveImportantInfo(YERT, LayersMaterials,eta,Ti,To,Ui,Uo,Rs,Rsh)
 print('BERTinfo = ', BERTinfo)
 print('YERTinfo = ', YERTinfo)
 '''

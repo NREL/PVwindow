@@ -77,11 +77,14 @@ IRTh = 0.060
 MAPBrTh = 0.500
 EVATh = 3000
 
-Thickness = [GlassTh,FTOTh,TiO2Th,MAPBrTh]#,NiOTh,ITOTh,EVATh,GlassTh,TiO2lowETh,AgTh,TiO2lowETh]
+#When running all 11 layers, layers 7 and 8 explode to 28847K and 68045 K. ALl others are around 300K.
+#Layers 7 and 8 are EVA and GLass which are thick. THickness gets squared so ti explodes. Idk how to correct that.
+
+Thickness = [GlassTh,FTOTh,TiO2Th,MAPBrTh,NiOTh,ITOTh,EVATh,GlassTh,TiO2lowETh,AgTh,TiO2lowETh]
 #Thickness = [FTOTh,TiO2Th]#,NiOTh,ITOTh,EVATh,GlassTh,TiO2lowETh,AgTh,TiO2lowETh]
-LayersMaterials = [Glass,FTO,TiO2,MAPBr]#,NiO,ITO,EVA,Glass,TiO2lowE,Ag,TiO2lowE]
+LayersMaterials = [Glass,FTO,TiO2,MAPBr,NiO,ITO,EVA,Glass,TiO2lowE,Ag,TiO2lowE]
 #LayersMaterials = [FTO,TiO2]#,NiO,ITO,EVA,Glass,TiO2lowE,Ag,TiO2lowE]
-Boundary = [GlassBound,FTOBound,TiO2Bound,MAPBrBound]#,NiOBound,ITOBound,EVABound,GlassBound,TiO2lowEBound,AgBound,TiO2lowEBound]
+Boundary = [GlassBound,FTOBound,TiO2Bound,MAPBrBound,NiOBound,ITOBound,EVABound,GlassBound,TiO2lowEBound,AgBound,TiO2lowEBound]
 AbsorberLayer = 4
 AbsorberBoundary = MAPBrBound
 Rs = .002 #* ohm #series resistance
@@ -96,8 +99,8 @@ Uo = 17 #W/(m**2 *K)
 Rtot = 1/Ui
 h = 12
 k = 1
-TcellAbsorber = 309
-TList=[300,300,300,309]
+#TcellAbsorber = 300
+TList=[300,300,300,300,300,300,300,300,300,300,300,300]
 #L = layer thickness
 #Qinc = solar_constant
 #solar_constant = sum(Qlayers)
@@ -302,14 +305,6 @@ plt.legend(loc = 'upper left')
 plt.show()
 
 
-ST1 = SurfaceTemp(Ti,q1, Thickness[0], 12)
-ST2 = SurfaceTemp(Ti,q2, Thickness[1], 12)
-ST3 = SurfaceTemp(Ti,q3, Thickness[2], 12)
-ST4 = SurfaceTemp(Ti,q4, Thickness[3], 12)
-
-print('surface temp test calcs',ST1,ST2,ST3,ST4)
-#IFT = InterfaceTemp(LayersMaterials, Thickness, Ts1, Ts2, Tcell,k)
-
 #Moopsbrgd
 
 '''
@@ -341,7 +336,7 @@ def GiveTSList4Solv(eta, Thickness, LayersMaterials, qdots, Ti, To, TList,h,k):#
 #Initial Guess
 def GiveTListGuess(LayersMaterials):
     x = len(LayersMaterials)+1
-    TList = [330]*x
+    TList = [300]*x
     #for i in range(x):
     #    TList.append(300) #Generate a list of variables T1,T2,...,Ti
     return TList
@@ -352,14 +347,22 @@ Ts1 = SurfaceTemp(To, Thickness[0], dotq[0], 12)
 Ts2 = InterfaceTemp(Thickness[1], dotq[1], TList[1], TList[2], 1)
 Ts3 = InterfaceTemp(Thickness[2], dotq[2], TList[2], TList[3], 1)
 Ts4 = InterfaceTemp(Thickness[3], dotq[3], TList[3], TList[4], 1)
-Ts5 = SurfaceTemp(Ti, Thickness[3], dotq[3], 12)
+Ts5 = InterfaceTemp(Thickness[4], dotq[4], TList[4], TList[5], 1)
+Ts6 = InterfaceTemp(Thickness[5], dotq[5], TList[5], TList[6], 1)
+Ts7 = InterfaceTemp(Thickness[6], dotq[6], TList[6], TList[7], 1)
+Ts8 = InterfaceTemp(Thickness[7], dotq[7], TList[7], TList[8], 1)
+Ts9 = InterfaceTemp(Thickness[8], dotq[8], TList[8], TList[9], 1)
+Ts10 = InterfaceTemp(Thickness[9], dotq[9], TList[9], TList[10], 1)
+Ts11 = InterfaceTemp(Thickness[10], dotq[10], TList[10], TList[11], 1)
+Ts12 = SurfaceTemp(Ti, Thickness[10], dotq[10], 12)
 
 print('Test of manual GiveTSList4Solv', Ts1,Ts2,Ts3,Ts4,Ts5)
+print('Test of manual GiveTSList4Solv', Ts6,Ts7,Ts8,Ts9,Ts10, Ts11,Ts12)
 
 ListOTs = GiveTSList4Solv(eta, Thickness, LayersMaterials, dotq, Ti, To, TList,12,1)
 print('List of T calcs',ListOTs)
 
-#MoopsNSons
+MoopsNSons
 
 
 #Function to solve
@@ -424,6 +427,7 @@ def GiveTSList4Plot(eta, Thickness, LayersMaterials, Ti, To, TList, AbsorberLaye
     W = len(LayersMaterials)
     if W == len(Thickness):
         #Figure out h or soemthing
+        Distance=0
         TDistList = []
         z=GiveZ(Thickness)
         qdots = qdot(LayersMaterials,Thickness,eta,TList,AbsorberLayer)
@@ -436,8 +440,10 @@ def GiveTSList4Plot(eta, Thickness, LayersMaterials, Ti, To, TList, AbsorberLaye
         #    z.append(np.linspace(Thickness[j],Thickness[j-1],num = (Thickness[j-1]-Thickness[j])*100))
         for i in range(W): 
             #Thickness[i] = Thickness[i]/Thickness[i]
+            Distance = Distance+Thickness[i]
             TDistList.append([])
-            TDistList[-1].append(LayerTempDist(Thickness[i], z[i][0], qdots[i], TList[i], TList[i+1],k))
+            TDistList[-1].append(LayerTempDist(Distance, z[i][0], qdots[i], TList[i], TList[i+1],k))
+            #Thickness[i] = Thickness[i]+Thickness[i+1]
         return TDistList
     else:  
         raise ValueError ('layers and Thickness lengths do not match')
@@ -466,10 +472,10 @@ print('Time to solve in minutes = ',(end2-start2)/60)
 #print('z is',z)
 
 plt.figure()
-plt.plot(z[0][0],PlotResult[0][0],color='magenta',marker=None,label="$TempDist$")
-plt.plot(z[1][0],PlotResult[1][0],color='gold',marker=None,label="$TempDist$")
-plt.plot(z[2][0],PlotResult[2][0],color='red',marker=None,label="$TempDist$")
-plt.plot(z[3][0],PlotResult[3][0],color='blue',marker=None,label="$TempDist$")
+plt.plot(z[0][0],PlotResult[0][0],color='magenta',marker=None,label="$Layer1$")
+plt.plot(z[1][0],PlotResult[1][0],color='gold',marker=None,label="$Layer2$")
+plt.plot(z[2][0],PlotResult[2][0],color='red',marker=None,label="$Layer3$")
+plt.plot(z[3][0],PlotResult[3][0],color='blue',marker=None,label="$Layer4$")
 plt.xlabel('Thickness (um), $\mu$m')
 plt.ylabel('Temperature (K), $\mu$m')
 plt.legend(loc = 'upper right')
