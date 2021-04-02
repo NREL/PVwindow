@@ -139,8 +139,8 @@ class Stack:
         
         integ = vegas.Integrator([lamrange])
         
-        numerator = integ(lambda lam: self.Is(lam)*self.cieplf(lam)*self.get_RAT(lam,inc_angle)[2], nitn=10, neval=100)[0]
-        denominator = integ(lambda lam: self.Is(lam)*self.cieplf(lam), nitn=10, neval=100)[0]
+        numerator = integ(lambda lam: self.Is(lam)*self.cieplf(lam)*self.get_RAT(lam,inc_angle)[2], nitn=10, neval=150)[0]
+        denominator = integ(lambda lam: self.Is(lam)*self.cieplf(lam), nitn=10, neval=150)[0]
         VLT = numerator/denominator
         
         #print(type(Asol.mean))
