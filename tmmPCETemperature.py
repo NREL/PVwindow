@@ -81,7 +81,6 @@ DictTh={'GlassTh':GlassTh,'TiO2Th':TiO2Th,'FTOTh':FTOTh,'MAPITh':MAPITh,'AZOTh':
 
 #When running all 11 layers, layers 7 and 8 explode to 28847K and 68045 K. ALl others are around 300K.
 #Layers 7 and 8 are EVA and GLass which are thick. THickness gets squared so ti explodes. Idk how to correct that.
-#Thickness=[1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.]
 
 Materials = [Glass,FTO,TiO2,MAPBr,NiO,ITO,EVA,Glass,TiO2lowE,Ag,TiO2lowE]
 Thickness = np.array(tpc.GiveThicks(Materials, DictTh))
@@ -181,7 +180,7 @@ def qdot(Materials, Thickness, eta, TList, AbsorberLayer):
 
 '''I add up all the Qs and return a qdot for the whole cell'''
 def qdotSum(Materials, Thickness, eta, TcellAbsorber, AbsorberLayer):  
-    layerSpectra = GiveLayerAbs(Thickness,Materials)
+    layerSpectra = GiveLayerAbs(Thickness0,Materials)
     #layerSpectraInterp = tpc.GiveEInterp(layerSpectra)
     x = len(Thickness)
     QList = 0
@@ -214,7 +213,7 @@ def SurfaceTemp(Tinf, Thick, qdot, h):
 '''To find edge temperature, set Ts1 or Ts2 equal to SurfaceTemp'''
 def InterfaceTemp(Thick, qdot, Ts1, Ts2, k, x=0):
     #x=0
-    LTD = (qdot*(1/2*Thick)**2/(2*k))*(1-((x-1/2*Thick)**2/(1/2*Thick)**2)) + ((Ts2-Ts1)/2)*(x-1/2*Thick)/(1/2*Thick) + (Ts1+Ts2)/2##
+    LTD = (qdot*(1/2*Thick)**2/(2*k))*(1-((x-1/2*Thick)**2/(1/2*Thick)**2)) + ((Ts2-Ts1)/2)*(x-1/2*Thick)/(1/2*Thick) + (Ts1+Ts2)/2
     return LTD
 
 
@@ -248,8 +247,8 @@ plt.title("Absorbance")
 plt.legend(loc = 'upper left')
 plt.show()
 
-dotq = qdot(Materials,Thickness,eta, TList, AbsorberLayer)
-print(dotq)
+dotq = qdot(Materials,Thickness1,eta, TList, AbsorberLayer)
+print('qdots test are',dotq)
 #Moopsbrgd
 
 
@@ -260,10 +259,10 @@ def GiveTSList4Solv(eta, Thickness, Materials, qdots, Ti, To, TList,h,k):#List o
     x = len(Materials)
     if x == len(Thickness):
         #Figure out h or soemthing
-        TDistList = [InterfaceTemp(Thickness[0], qdots[0], (SurfaceTemp(To, Thickness[0], qdots[0], h)), TList[1],k)- TList[0]]#Materials[0], To, Thickness[0], h) - TList[0])]
+        TDistList = [InterfaceTemp(Thickness[0], qdots[0], (SurfaceTemp(To, Thickness[0], qdots[0], h)), TList[1],k)- TList[0]]
         for i in range(x-2+1): #Add 1 to account for final interface. -2 to account for boundaries
-            TDistList.append(InterfaceTemp(Thickness[i+1], qdots[i+1], TList[i+1], TList[i+2],k)- TList[i+1])#eta, Materials[i], Thickness[i], TList[i], TList[i+1]) - TList[i])
-        TDistList.append(InterfaceTemp(Thickness[-1], qdots[-1], (SurfaceTemp(Ti, Thickness[-1], qdots[-1], h)),TList[-2],k)- TList[-1])#Materials[x], Ti, Thickness[x], h) - TList[x])
+            TDistList.append(InterfaceTemp(Thickness[i+1], qdots[i+1], TList[i+1], TList[i+2],k)- TList[i+1])
+        TDistList.append(InterfaceTemp(Thickness[-1], qdots[-1], (SurfaceTemp(Ti, Thickness[-1], qdots[-1], h)),TList[-2],k)- TList[-1])
         return TDistList
         #TDistList = [SurfaceTemp(To, Thickness1[0], qdots[0], h)-TList[0]]
         #for i in range(x-2+1): #Add 1 to account for final interface. -2 to account for boundaries
@@ -283,8 +282,6 @@ def GiveTSList4Solv(eta, Thickness, Materials, qdots, Ti, To, TList,h,k):#List o
 def GiveTListGuess(Materials):
     x = len(Materials)+1
     TList = [300]*x
-    #for i in range(x):
-    #    TList.append(300) #Generate a list of variables T1,T2,...,Ti
     return TList
 
 TList = GiveTListGuess(Materials)
@@ -294,14 +291,14 @@ Ts2 = InterfaceTemp(Thickness1[0], dotq[0], SurfaceTemp(To, Thickness1[0], dotq[
 Ts3 = InterfaceTemp(Thickness1[1], dotq[1], TList[1], TList[2], 1)
 Ts4 = InterfaceTemp(Thickness1[2], dotq[2], TList[2], TList[3], 1)
 Ts5 = InterfaceTemp(Thickness1[3], dotq[3], TList[3], TList[4], 1)
-Ts6 = InterfaceTemp(Thickness1[4], dotq[4], TList[4], TList[5], 1)
+'''Ts6 = InterfaceTemp(Thickness1[4], dotq[4], TList[4], TList[5], 1)
 Ts7 = InterfaceTemp(Thickness1[5], dotq[5], TList[5], TList[6], 1)
 Ts8 = InterfaceTemp(Thickness1[6], dotq[6], TList[6], TList[7], 1)
 Ts9 = InterfaceTemp(Thickness1[7], dotq[7], TList[7], TList[8], 1)
 Ts10 = InterfaceTemp(Thickness1[8], dotq[8], TList[8], TList[9], 1)
 Ts11 = InterfaceTemp(Thickness1[9], dotq[9], TList[9], TList[10], 1)
 Ts12 = InterfaceTemp(Thickness1[10], dotq[10], TList[10], SurfaceTemp(Ti, Thickness1[10], dotq[10], 12), 1)
-#Ts13 = SurfaceTemp(Ti, Thickness1[10], dotq[10], 12)#-TList[11]
+#Ts13 = SurfaceTemp(Ti, Thickness1[10], dotq[10], 12)#-TList[11]'''
 
 '''
 Ts1 = SurfaceTemp(To, Thickness1[0], dotq[0], 12)#-TList[0]
@@ -317,7 +314,7 @@ Ts10 = InterfaceTemp(Thickness1[9], dotq[9], TList[9], TList[10], 1)
 Ts11 = InterfaceTemp(Thickness1[10], dotq[10], TList[10], TList[11], 1)
 Ts12 = SurfaceTemp(Ti, Thickness1[10], dotq[10], 12)
 '''
-print('Test of manual GiveTSList4Solv', Ts2,Ts3,Ts4,Ts5,Ts6,Ts7,Ts8,Ts9,Ts10, Ts11,Ts12)#,Ts13)
+print('Test of manual GiveTSList4Solv', Ts2,Ts3,Ts4,Ts5)#,Ts6,Ts7,Ts8,Ts9,Ts10, Ts11,Ts12)#,Ts13)
 #print('Test of manual GiveTSList4Solv', Ts6,Ts7,Ts8,Ts9,Ts10, Ts11,Ts12)
 
 ListOTs = GiveTSList4Solv(eta, Thickness, Materials, dotq, Ti, To, TList,12,1)
@@ -328,29 +325,33 @@ print('List of T calcs',ListOTs)
 
 '''I get solved to give surface temperatures'''
 def FunctionForSolving(TList):
-    qdots = qdot(Materials, Thickness, eta, TList, AbsorberLayer)
+    qdots = qdot(Materials, Thickness1, eta, TList, AbsorberLayer)
     return GiveTSList4Solv(eta, Thickness1, Materials, qdots, Ti, To, TList,h,k)
 
 '''I solve for Temperature at all surfaces'''
-def GiveSurfaceTemps(eta, Thickness, Materials, Ti, To, AbsorberLayer):
-    eta = eta
-    Thickness = np.array(Thickness)
-    #Thickness *= 1e-6
-    Materials = Materials
-    Ti = Ti
-    To = To
-    AbsorberLayer = AbsorberLayer
+def GiveSurfaceTemps(Materials):
     TListGuess = GiveTListGuess(Materials)
     return scipy.optimize.fsolve(FunctionForSolving, TListGuess)
 
 #___________________________Calculating Temps____________________________________________
 
 start1 = time.time()
-#Result = GiveSurfaceTemps(eta, 8, Materials, Ti, To, AbsorberLayer)
+Result = GiveSurfaceTemps(Materials)
 end1 = time.time()
 
 #print('result is',Result)
 print('Time to solve in seconds = ',end1-start1,'and minutes =',(end1-start1)/60)
+
+
+
+
+
+
+
+
+
+
+
 
 
 #Plotting
@@ -358,13 +359,15 @@ print('Time to solve in seconds = ',end1-start1,'and minutes =',(end1-start1)/60
 #__________________________________Plotting________________________
 
 
-#To get interface temp equation set x=0
+'''I repackage the InterfaceTemp function so that it feeds easily into the following functions'''
 def LayerTempDist(Thick, x, qdot, Ts1, Ts2, k):
     #LTD = (qdot*(1/2*Thick)**2/(2*k))*(1-((x-1/2*Thick)**2/(1/2*Thick)**2)) + ((Ts2-Ts1)/2)*(x-1/2*Thick)/(1/2*Thick) + (Ts1+Ts2)/2##
     #LTD = (qdot*Thick**2/(2*k))*(1-((x-1/2*Thick)**2/(1/2*Thick)**2))# + ((Ts2-Ts1)/2)*(x-1/2*Thick)/(1/2*Thick) + (Ts1+Ts2)/2##
     #return LTD
     return InterfaceTemp(Thick,qdot,Ts1,Ts2,k,x = x)
 
+'''I give a list of arrays for calculating and plotting temperature distribution'''
+'''Each array goes from 0 to the thickness of each layer'''
 def GiveZ(Thickness):
      x = len(Thickness)
      z=[]
@@ -374,6 +377,7 @@ def GiveZ(Thickness):
         z[-1].append(np.linspace(0,Thickness[j], num = 100))
      return z
 
+'''I Use Z to calculate the temperature distribution for each layer'''
 def GiveTSList4Plot(eta, Thickness, Materials, Ti, To, TList, AbsorberLayer, h,k):#List of surface temp calcs for solving
     W = len(Materials)
     if W == len(Thickness):
@@ -401,7 +405,7 @@ def GiveTSList4Plot(eta, Thickness, Materials, Ti, To, TList, AbsorberLayer, h,k
         raise ValueError ('layers and Thickness lengths do not match')
 
 
-NeoTList = Result#TList#[300,303,306,309,309,320,317,308,307,304,300,300]#
+NeoTList = Result #TList#[300,303,306,309,309,320,317,308,307,304,300,300]#
 start2 = time.time()
 PlotResult = GiveTSList4Plot(eta, Thickness1, Materials, Ti, To, NeoTList, AbsorberLayer, h,k)
 end2 = time.time()  
@@ -438,11 +442,11 @@ plt.show()
 
 
 
-#print((dotq[1]*(1/2*Thickness[1])**2/(2*k))*(1-((x[1][0]-1/2*Thickness[1])**2/(1/2*Thickness[1])**2)))
-#print(  (1-((x[1][0]-1/2*Thickness[1])**2/(1/2*Thickness[1])**2)) )
-#print( (dotq[1]*(1/2*Thickness[1])**2/(2*k))  )
+#print((dotq[1]*(1/2*Thickness1[1])**2/(2*k))*(1-((x[1][0]*(1e-6)-1/2*Thickness1[1])**2/(1/2*Thickness1[1])**2)))
+#print(  (1-((x[1][0]*(1e-6)-1/2*Thickness1[1])**2/(1/2*Thickness1[1])**2)) )
+#print( (dotq[1]*(1/2*Thickness1[1])**2/(2*k))  )
 
-#print(((300-300)/2)*(x-1/2*Thickness[1])/(1/2*Thickness[1]))
+#print(((300-300)/2)*(x-1/2*Thickness1[1])/(1/2*Thickness1[1]))
 #print((300+300)/2)
 
 #print((dotq[1]*(1/2*Thickness[1])**2/(2*k))*(1-((x[1][0]-1/2*Thickness[1])**2/(1/2*Thickness[1])**2))+((300-300)/2)*(x[1][0]-1/2*Thickness[1])/(1/2*Thickness[1])+(300+300)/2)

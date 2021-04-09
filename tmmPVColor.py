@@ -4,12 +4,9 @@ Created on Thu Mar  4 16:08:09 2021
 
 @author: aduell
 """
-#import tmm as tmm
 from numpy import linspace, array,vstack
-#import numpy as np
 import matplotlib.pyplot as plt
 from colorpy import plots, ciexyz, colormodels #need to install colorpy to call all packages at once
-#from tmmPCECalc import num_lams, lams
 import tmmPCECalc as tpc
 # This whole thing uses microns for length
 

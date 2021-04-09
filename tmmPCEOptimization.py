@@ -6,7 +6,7 @@ Created on Thu Mar  4 12:24:50 2021
 """
 
 
-import numpy as np
+#import numpy as np
 #from numpy import pi, linspace, array, exp
 
 #import tmm
@@ -16,7 +16,7 @@ import numpy as np
 from wpv import Layer, Stack
 #import scipy.interpolate, scipy.integrate, pandas, sys
 #import scipy
-from scipy.optimize import minimize, differential_evolution, NonlinearConstraint, dual_annealing
+from scipy.optimize import minimize, differential_evolution, NonlinearConstraint, dual_annealing, Bounds
 #from numericalunits import W, K, nm, m, cm, s, eV, meV, V, mA, c0, hPlanck, kB, e, A, ohm
 #import sympy
 #import sympy.solvers.solvers
@@ -27,7 +27,7 @@ assert sys.version_info >= (3,6), 'Requires Python 3.6+'
 
 import tmmPCECalc as tpc
 from tmmPCECalc import Glass,TiO2, FTO, MAPI,AZO,ITO,ITOlowE,SnO2,SnO2lowE,SnO2lowEfat,SiO2,NiO,Ag,TiO2lowE,TiO2lowEfat,Bleach,ClAlPc,C60,IR,MAPBr,EVA
-from tmmPCECalc import VLT,GiveLayers,Spectra,GiveEInterp,TcellCalc,max_efficiency,GiveThicks,GiveBounds,GiveImportantInfo,inc_angle,lams
+from tmmPCECalc import VLT,GiveLayers,Spectra,GiveEInterp,TcellCalc,max_efficiency,GiveThicks,GiveBounds,GiveImportantInfo,inc_angle,lams,SHGC
 #import tmmPVColor as pvc
 #import tmmPCETemperature as tpt
 #from colorpy import plots, ciexyz, colormodels #need to install colorpy to call all packages at once
@@ -42,7 +42,8 @@ from statistics import stdev
 #lams = np.linspace(0.3,2.5,num=num_lams) #um
 
 
-#Bounds
+'''We are boundary conditions corresponding to each material type'''
+'''Can be changed to tune optimization range'''
 GlassBound = (5999.9,6000.1)
 TiO2Bound = (0.0250,.0750)#(0.025,.1)
 FTOBound = (0.10,0.30)
@@ -55,15 +56,15 @@ SnO2lowEBound = (.015,.045)
 SnO2lowEfatBound = (0.025,.075)
 SiO2Bound = (.012,.036)
 NiOBound = (.025,.075)#(.025,.1)
-AgBound = (.01499, .01501)
-TiO2lowEBound = (.027, .033)
+AgBound = (.0130, .0160)
+TiO2lowEBound = (.020, .040)
 TiO2lowEfatBound = (.03,.09)
 BleachBound = (.180, .500)
 ClAlPcBound = (.150, .600)
 C60Bound = (.100,.300)
 IRBound = (.030, .12)
 MAPBrBound = (.250,1)
-EVABound = (2999,3001)
+EVABound = (2999.9,3000.1)
 #PTAApolymer
 DictBound={'GlassBound':GlassBound,'TiO2Bound':TiO2Bound,'FTOBound':FTOBound,'MAPIBound':MAPIBound,'AZOBound':AZOBound,'ITOBound':ITOBound,'ITOlowEBound':ITOlowEBound,'SnO2Bound':SnO2Bound,'SnO2lowEBound':SnO2lowEBound,'SnO2lowEfatBound':SnO2lowEfatBound,'SiO2Bound':SiO2Bound,'NiOBound':NiOBound,'AgBound':AgBound,'TiO2lowEBound':TiO2lowEBound,'TiO2lowEfatBound':TiO2lowEfatBound,'BleachBound':BleachBound,'ClAlPcBound':ClAlPcBound,'C60Bound':C60Bound,'IRBound':IRBound,'MAPBrBound':MAPBrBound,'EVABound':EVABound}
 
@@ -98,13 +99,24 @@ DictTh={'GlassTh':GlassTh,'TiO2Th':TiO2Th,'FTOTh':FTOTh,'MAPITh':MAPITh,'AZOTh':
 
 '''Constraint on VLT
 To change the minimum allowed VLT, change the float in the return calculation
-To require a specific VLT value change the float to desired value and in VLTc change 'ineq' to 'eq' '''
+To require a specific VLT value change the values in VLTc '''
 def VLTconstraint(Thickness):
     layers = GiveLayers(Thickness, Materials)
-    VLTc = VLT(layers)
-    return VLTc - 0.5
-VLTc = {'type': 'ineq', 'fun': VLTconstraint}
+    #VLTc = 
+    return VLT(layers)
+#VLTc = {'type': 'ineq', 'fun': VLTconstraint}
+VLTc =  NonlinearConstraint(VLTconstraint, 0.50, 1.0)
 
+'''Constraint on SHGC. Input thickness is a placeholder to keep things consistent
+with the optimization function.Currently it operates based on global variables
+since the only variables that change are Tcell and Ts.
+Both vary with each iteration of MediumOptimize'''
+'''To change the constraint range, change the values in SHGCc'''
+'''
+def SHGCconstraint(Thickness):
+    return SHGC(Ts, Ti, To, Tcell, Ui)
+SHGCc =  NonlinearConstraint(SHGCconstraint, 0.0, 0.5)
+'''
 
 '''This function gets optimized. Returns PCE as a funciton of layer thickness'''
 def MediumOptimize(Thickness):
@@ -113,12 +125,19 @@ def MediumOptimize(Thickness):
     layers = GiveLayers(Thickness, Materials)
     SpectraCurves = Spectra(layers,AbsorberLayer)
     Absorbed = GiveEInterp(SpectraCurves['AbsByAbsorbers'])
+    #global Ts
+    #Ts = SpectraCurves['Ts']
+    #global Tcell
     Tcell = TcellCalc(SpectraCurves['As'],eta, Ti,To,Absorbed,Ui, Uo, Rs, Rsh)
+    
     MaxEff = max_efficiency(eta,Absorbed,Tcell, Rs, Rsh)
     
     #endcalc=time()
     #print('sec/it',endcalc-startcalc)
     return MaxEff
+
+
+
 
 '''This function does the optimization step'''
 def dotheoptimize(Thickness):
@@ -126,11 +145,11 @@ def dotheoptimize(Thickness):
     func_to_minimize = lambda x : -MediumOptimize(x)
     #bnd = scipy.optimize.Bounds(.02, .1, keep_feasible=False)#If testing a single layer use this line to designate the bounds
     return minimize(func_to_minimize, Thickness,method='SLSQP', bounds = Boundary, constraints = (VLTc), options={'ftol': 1e-6, 'eps': 1.4901161193847656e-08,'disp': True, 'finite_diff_rel_step': None})
-      #########  CHanged ftol from e-6 to e-1. eps from e-8 to e-1
     #return scipy.optimize.minimize(func_to_minimize, Thickness,method='trust-constr', bounds = Boundary, constraints = (VLTc), options={'verbose':3})
 
 '''This function is intended to be a standalone optimizaiton function'''
 '''All needed parameters are given as inputs rather than defined somewhere else in the code.'''
+'''This needs to be rewritten because the variable definitions don't work as intended'''
 def TotalOptimize(eta, Thickness, Materials, Boundaries, AbsorberLayer, Ti = 300, To = 300, Ui = 8.3, Uo = 17, Rs = .02, Rsh = 1000, n = 1, Ns = 1):
     AbsorberLayer = AbsorberLayer
     Rs = Rs
@@ -150,26 +169,25 @@ def TotalOptimize(eta, Thickness, Materials, Boundaries, AbsorberLayer, Ti = 300
 '''A VLT constraint for constraining the first global optimizer'''
 def VLTGconstraint(Thickness):
     layers = GiveLayers(Thickness, Materials)
-    VLTstack=Stack(layers)
-    VLTgc=VLTstack.get_visible_light_transmission(lams,inc_angle)
+    #VLTstack=Stack(layers)
+    VLTgc=VLT(layers)
     return VLTgc
 VLTGc = NonlinearConstraint(VLTGconstraint, 0.5, 1)
 
 '''This function uses differential evolution to find a global maximum of the function.'''
 def GlobalOptimize(Thickness):
     func_to_minimize = lambda x : -MediumOptimize(x)
-    return differential_evolution(func_to_minimize, bounds = Boundary, constraints = (VLTGc)) #Thickness,method='SLSQP', bounds = Boundary, constraints = (VLTc), options={'ftol': 1e-06, 'eps': 1.4901161193847656e-08})#, 'finite_diff_rel_step': None})
+    return differential_evolution(func_to_minimize, bounds = Boundary, constraints = (VLTGc)) 
 
-'''This function uses differential annealing to to find a global maximum. Seems to run infinitely.'''
+'''This function uses differential annealing to to find a global maximum.'''
 def GlobalOptimize2(Thickness):
     func_to_minimize = lambda x : -MediumOptimize(x)
     return dual_annealing(func_to_minimize, bounds = Boundary)
 
 
-
 #_____________________________________________Operational Area__________________________________________________#
 #This stuff is used to control the optimization 
-Materials = [Glass,FTO,TiO2,MAPBr,NiO,ITO]#,EVA,Glass,TiO2lowE,Ag]#,TiO2lowE]
+Materials = [Glass,FTO,TiO2,MAPBr,NiO,ITO,EVA,Glass,TiO2lowE,Ag,TiO2lowE]
 Thickness = GiveThicks(Materials,DictTh)           #[GlassTh,FTOTh,TiO2Th,MAPBrTh,NiOTh,ITOTh,EVATh,GlassTh,TiO2lowETh,AgTh,TiO2lowETh]
 Boundary = GiveBounds(Materials,DictBound)
 #Boundary = (GlassBound,FTOBound,TiO2Bound,MAPBrBound,NiOBound,ITOBound,EVABound,GlassBound,TiO2lowEBound,AgBound,TiO2lowEBound)
@@ -197,28 +215,40 @@ Rtot = 1/Ui
 #8 layers 16 minutes
 
 #6 layers 18 minutes
+#6 layers after changing import style 16.49 min
 #8 layers 20 min
+#8 layers after changing import style 14 min
+#8 layers after changing import style 12.4 min
 #9 layers switching tio2 for glass 49 min
 #9 294 minutes. But also failed
 #9 layers. tightened tio2 bounds, 130 minutes, success,nfev: 615, nit: 51
-#10 layers 
-
+#9 layers. Very tight TiO2 bounds, 50 min, success, nfev 196, nit 16
+#10 layers Failure. 285 min, nfev 1345, nit 100
+#11 layers last 3 layers MAPBr,NiO,ITO, success, nit 34, nfev 490, 102 min
+#11 layers after changing constraint definition. 43 min. success. nit 14, nfev 181
+#11 layers after changing constraint definition. 58 min. success. nit 23, nfev 264
+#11 layers after changing Boundary definition. 36.6 min. success. nit 14, nfev 168
+#" 23 and 62 minutes
 
 #___________________________________Pre Optimization______________________
 
-
+'''
 #This big block times the individual functions calculated during the optimization.
 #Used to identify which calculations take the most time.
 TcellT = 300
 startlayer=time()
+'''
 layers = GiveLayers(Thickness, Materials)
+'''
 endlayer = time()
 startspectra= time()
 spectra = Spectra(layers, AbsorberLayer)
 endspectra= time()
+'''
 startvlt =time()
 VLTtest = VLT(layers)
 endvlt=time()
+'''
 startgiveeinterp=time()
 Absby=spectra['AbsByAbsorbers']
 Absorbed = GiveEInterp(Absby)
@@ -239,7 +269,7 @@ starttcell=time()
 TcellNew = TcellCalc(spectra['As'], eta, Ti,To, Absorbed, Ui, Uo, Rs, Rsh)
 endtcell=time()
 print('Time to calculate in sec: ','layers',endlayer-startlayer,'spectra',endspectra-startspectra,'vlt',endvlt-startvlt,'giveeinterp',endgiveeinterp-startgiveeinterp,'Q',endq-startq,'rr0',endrro-startrr0,'generated',endgenerated-startgenerated,'pmp',endpmp-startpmp,'tcell',endtcell-starttcell)
-
+'''
 #VLT can vary due to the way it is calculated.
 #This part caluclates VLT 5 times and lets you see how different they are.
 VLT1 = VLT(layers)
@@ -254,9 +284,8 @@ print('Standard deviaiton of VLT is',stdev([VLTtest,VLT1,VLT2,VLT3,VLT4,VLT5]))
 #print('VLT range and thicknesses of absorber are',minmax)
 
 #This gives useful information before optimizing.Good for comparing the effects of the optimizer on PV performance
-PreOpInfo = GiveImportantInfo(Thickness, Materials,eta,Ti,To,Ui,Uo,Rs,Rsh)
+PreOpInfo = GiveImportantInfo(Thickness, Materials,eta,Ti,To,Ui,Uo,Rs,Rsh,AbsorberLayer,0)
 #print('PreOp Calculations give',PreOpInfo)
-
 
 
 
@@ -272,7 +301,7 @@ print('Time to calculate PCE in sec', TimePCE, 'PCE + VLT time is', TimePCE+(end
 
 start2 = time()
 WERT = dotheoptimize(Thickness)
-WERT = TotalOptimize(0.6, Thickness, Materials, Boundary, 4)#For testing effect of local variables rather than global
+#WERT = TotalOptimize(0.6, Thickness, Materials, Boundary, 4)#For testing effect of local variables rather than global
 
 end2 = time()
 print(WERT)
@@ -283,14 +312,14 @@ print('time to calculate PCE from scratch in seconds = ', TimePCE, 'Time to run 
 #WERT2 = TotalOptimize(eta, Thickness, Materials, AbsorberLayer, Boundary, Ti = 300, To = 300, Ui = 8.3, Uo = 17, Rs = .02, Rsh = 100, n = 1, Ns = 1)
 #print(WERT2)
 
-WERTinfo = GiveImportantInfo(WERT['x'], Materials, eta,Ti,To,Ui,Uo,Rs,Rsh)
+WERTinfo = GiveImportantInfo(WERT['x'], Materials, eta,Ti,To,Ui,Uo,Rs,Rsh,AbsorberLayer,0)
 print('WERTinfo = ', WERTinfo)
 
-NotToday
+
 
 
 #___________________________Global Optimization happens here___________________________________________#
-
+'''
 #This stuff is for the global optimization routine using differential evolution.
 #The optimization step is timed and useful info is printed out.
 start3 = time()
@@ -303,7 +332,7 @@ print('Time to optimize globally in minutes = ',GlobalTime/60)
 GlobalWERTinfo = GiveImportantInfo(GlobalWERT['x'], Materials)
 print(GlobalWERTinfo)
 
-'''
+
 #This runs forever. Do not use--> Messed up VLT range.
 #If VLT Range cannot be reached with absorber type then it will not solve.
 start4 = time()
@@ -312,16 +341,13 @@ end4 = time()
 GlobalTime2 = (end4-start4)
 print(GlobalWERT2)
 print('Time to optimize globally in minutes = ',GlobalTime2/60)
+GlobalWERTinfo2 = tpc.GiveImportantInfo(GlobalWERT2['x'], Materials)
+print('GlobalWERTinfo2 = ', GlobalWERTinfo2)
 '''
 
 
 
 
-
-#GlobalWERTinfo = tpc.GiveImportantInfo(GlobalWERT['x'], Materials)
-#print('GlobalWERTinfo = ', GlobalWERTinfo)
-#GlobalWERTinfo2 = tpc.GiveImportantInfo(GlobalWERT2['x'], Materials)
-#print('GlobalWERTinfo2 = ', GlobalWERTinfo2)
 
 
 '''
@@ -374,6 +400,9 @@ ax.set_zlabel('PCE(x, y)')
 plt.show()
 '''
 
+
+
+#These are reports and other things saved for later
 '''
 Sim PCE for Optimization = 0.07380158488936082
 Time to calculate PCE in sec 7.238282203674316 PCE + VLT time is 12.648305654525757

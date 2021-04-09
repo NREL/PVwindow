@@ -18,7 +18,7 @@ from wpv import Layer, Stack
 #import scipy.interpolate, scipy.integrate, pandas, sys
 from scipy.interpolate import interp1d
 from scipy.integrate import quad, trapz
-from scipy.optimize import fsolve
+from scipy.optimize import fsolve, Bounds
 from pandas import read_excel
 import sys
 #import scipy
@@ -134,6 +134,7 @@ def GiveLayers(Thickness,Materials):
 
 '''I give a list of boundaries from a list of materials. Dict is a dictionary containing the boundary conditions'''
 '''All items in the dicitonary are labelled as 'Material'+'Bound'  '''
+'''
 def GiveBounds(Materials, DictBound):
     x = len(Materials)
     Bounds = []
@@ -141,6 +142,19 @@ def GiveBounds(Materials, DictBound):
         Bounds.append(DictBound[Materials[i].__name__ + 'Bound'])
     Bounds = array(Bounds)
     return Bounds
+'''
+'''I produce a Bounds object that defines the boundary conditions for optimization'''
+
+def GiveBounds(Materials, DictBound):
+    x = len(Materials)
+    lb = []
+    ub = []
+    for i in range(x):
+        lb.append(DictBound[Materials[i].__name__ + 'Bound'][0])
+    for i in range(x):
+        ub.append(DictBound[Materials[i].__name__ + 'Bound'][1])
+    bounds = Bounds(lb,ub)
+    return bounds
 
 '''I give a list of thicknesses from a list of materials. Dict is a dictionary containing the thickness values'''
 '''All items in the dicitonary are labelled as 'Material'+'Th'  '''
@@ -427,12 +441,13 @@ def max_efficiency(eta,Absorbed,Tcell, Rs, Rsh):
     return Give_Pmp(eta, Absorbed, Rs, Rsh, Tcell) / solar_constant
 
 '''I give important info about a solar cell such as PCE, SHGC, Temperature, etc'''
-def GiveImportantInfo(Thickness, Materials,eta,Ti,To,Ui,Uo,Rs,Rsh):
-    
+def GiveImportantInfo(Thickness, Materials,eta,Ti,To,Ui,Uo,Rs,Rsh,AbsorberLayer,Angle=0):
+    global inc_angle
+    inc_angle = giveincangle(Angle)
     
     layers = GiveLayers(Thickness,Materials)
     
-    spectra = Spectra(layers ,4)
+    spectra = Spectra(layers ,AbsorberLayer)
     AbsByAbsorbers = spectra['AbsByAbsorbers']
     Ts = spectra['Ts']
     Rfs = spectra['Rfs']
