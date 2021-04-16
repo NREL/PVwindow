@@ -28,6 +28,10 @@ import sys
 assert sys.version_info >= (3,6), 'Requires Python 3.6+'
 from pvlib.pvsystem import singlediode
 import tmmPVColor as pvc
+import CalculateVLTFromSpectrum as cvs
+from CalculateVLTFromSpectrum import AM15G, cieplf
+import vegas
+
 
 
 # This whole thing uses microns for length
@@ -243,6 +247,16 @@ def VLT(layers):
     VLTstack=Stack(layers)
     return VLTstack.get_visible_light_transmission(lams,inc_angle)
 
+'''THis gives VLT as a single number. Skips object usage and eliminates
+need to recalculate AM15G and cieplf every iteration'''
+def getFancyVLT(layers):#,lamrange,inc_angle):
+    integ = vegas.Integrator([lams])
+    Trans=Stack(layers)
+    numerator = integ(lambda lam: AM15G(lam)*cieplf(lam)*Trans.get_RAT(lam,inc_angle)[2], nitn=10, neval=100)[0]
+    denominator = integ(lambda lam: AM15G(lam)*cieplf(lam), nitn=10, neval=100)[0]
+    VLT = numerator/denominator
+    return VLT.mean
+
 '''Gives minimum and maximum VLT based exclusively on the PV layer. 
 Only useful for judging VLT constraint for a given PV material'''
 '''Requires input of single absorber layer with a tuple of (lb,ub)'''
@@ -442,8 +456,8 @@ def max_efficiency(eta,Absorbed,Tcell, Rs, Rsh):
 
 '''I give important info about a solar cell such as PCE, SHGC, Temperature, etc'''
 def GiveImportantInfo(Thickness, Materials,eta,Ti,To,Ui,Uo,Rs,Rsh,AbsorberLayer,Angle=0):
-    global inc_angle
-    inc_angle = giveincangle(Angle)
+    #global inc_angle
+    #inc_angle = giveincangle(Angle)
     
     layers = GiveLayers(Thickness,Materials)
     
@@ -455,7 +469,7 @@ def GiveImportantInfo(Thickness, Materials,eta,Ti,To,Ui,Uo,Rs,Rsh,AbsorberLayer,
     As = spectra['As']
     sanities = spectra['Total']
     Absorbed = GiveEInterp(AbsByAbsorbers)
-    VLTcalc = VLT(layers)
+    VLTcalc =  cvs.getVLT(Ts,lams)#VLT(layers)
     Tcell = TcellCalc(As,eta, Ti,To, Absorbed, Ui, Uo, Rs, Rsh)
     #Absorbed = tpc.GiveEInterp(tpc.Spectra(tpc.GiveLayers(Thickness, Materials),4)['AbsByAbsorbers'])
     data = GiveIVData(eta, Absorbed, Rs, Rsh,Tcell, n = 1, Ns = 1)

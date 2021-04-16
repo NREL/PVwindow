@@ -4,7 +4,16 @@ Created on Tue Mar  9 15:40:15 2021
 
 @author: aduell
 """
+'''
+_____________________Look here for notes________________________________________________
+TAbsorber in the qdot equation is throwing things off.  GIvepmp returns exp overflow when attempting to fsolve
+Need to figure out what TAbsorber actually is
+solver is not set up correctly. idk what is wrong with it
+interfacetemp has a transformation applied to it. Verify that it works
+Thickness as a varibale is annoying. Need two versions in m and um. Eg thickness1/0
+um goes to GiveLayerAbs and m goes to everything else
 
+'''
 
 import numpy as np
 #import tmm
@@ -82,7 +91,7 @@ DictTh={'GlassTh':GlassTh,'TiO2Th':TiO2Th,'FTOTh':FTOTh,'MAPITh':MAPITh,'AZOTh':
 #When running all 11 layers, layers 7 and 8 explode to 28847K and 68045 K. ALl others are around 300K.
 #Layers 7 and 8 are EVA and GLass which are thick. THickness gets squared so ti explodes. Idk how to correct that.
 
-Materials = [Glass,FTO,TiO2,MAPBr,NiO,ITO,EVA,Glass,TiO2lowE,Ag,TiO2lowE]
+Materials = [Glass,FTO,TiO2,MAPBr]#,NiO,ITO,EVA,Glass,TiO2lowE,Ag,TiO2lowE]
 Thickness = np.array(tpc.GiveThicks(Materials, DictTh))
 Thickness1=np.array(Thickness)
 #Thickness*=1e-6
@@ -95,8 +104,8 @@ Rsh = 1000 #* ohm #shunt resistance
 eta = 0.6
 n = 1
 Ns = 1
-Ti = 300
-To = 300
+Ti = 304
+To = 310
 Ui = 8.3 #W/(m**2 *K) 
 Uo = 17 #W/(m**2 *K)
 Rtot = 1/Ui
@@ -158,7 +167,8 @@ def qdot(Materials, Thickness, eta, TList, AbsorberLayer):
     #layerSpectraInterp = tpc.GiveEInterp(layerSpectra)
     #Need to change this temperature eventaully to integral of temeprature distributtion across absorber layer only.
     #Something like Integral(T(x)) from L1 to L2. Ts1 = AbsorberLayer-2 and Ts2 = absorberlayer-1
-    TAbsorber = TList[AbsorberLayer-1]
+    #TAbsorber = TList[AbsorberLayer-1]
+    TAbsorber=316
     x = len(Thickness)
     
     qList = []
@@ -178,7 +188,14 @@ def qdot(Materials, Thickness, eta, TList, AbsorberLayer):
     return qList
     #Units W/m^3
 
+
+#qq = qdot(Materials, Thickness1, eta, TList, AbsorberLayer)
+#print(qq)
+#MOopeort
+
+
 '''I add up all the Qs and return a qdot for the whole cell'''
+'''
 def qdotSum(Materials, Thickness, eta, TcellAbsorber, AbsorberLayer):  
     layerSpectra = GiveLayerAbs(Thickness0,Materials)
     #layerSpectraInterp = tpc.GiveEInterp(layerSpectra)
@@ -202,7 +219,7 @@ def qdotSum(Materials, Thickness, eta, TcellAbsorber, AbsorberLayer):
             #qList[-1].append(tpc.GiveQ(layerSpectraInterp,1)/Thickness[i])
             ThickSum = ThickSum + Thickness[i]
     return QList/ThickSum
-
+'''
 
 '''I describe surface temperature facing in or out based on ambient temp: Tinf'''
 def SurfaceTemp(Tinf, Thick, qdot, h):
@@ -214,6 +231,7 @@ def SurfaceTemp(Tinf, Thick, qdot, h):
 def InterfaceTemp(Thick, qdot, Ts1, Ts2, k, x=0):
     #x=0
     LTD = (qdot*(1/2*Thick)**2/(2*k))*(1-((x-1/2*Thick)**2/(1/2*Thick)**2)) + ((Ts2-Ts1)/2)*(x-1/2*Thick)/(1/2*Thick) + (Ts1+Ts2)/2
+    #LTD = ((Ts2-Ts1)/2)*(x-1/2*Thick)/(1/2*Thick) + (Ts1+Ts2)/2
     return LTD
 
 
@@ -259,10 +277,12 @@ def GiveTSList4Solv(eta, Thickness, Materials, qdots, Ti, To, TList,h,k):#List o
     x = len(Materials)
     if x == len(Thickness):
         #Figure out h or soemthing
-        TDistList = [InterfaceTemp(Thickness[0], qdots[0], (SurfaceTemp(To, Thickness[0], qdots[0], h)), TList[1],k)- TList[0]]
-        for i in range(x-2+1): #Add 1 to account for final interface. -2 to account for boundaries
-            TDistList.append(InterfaceTemp(Thickness[i+1], qdots[i+1], TList[i+1], TList[i+2],k)- TList[i+1])
-        TDistList.append(InterfaceTemp(Thickness[-1], qdots[-1], (SurfaceTemp(Ti, Thickness[-1], qdots[-1], h)),TList[-2],k)- TList[-1])
+        TDistList = [InterfaceTemp(Thickness[0], qdots[0], (SurfaceTemp(To, Thickness[0], qdots[0], h)), TList[1],k, x=0)- TList[0]]
+        TDistList.append(InterfaceTemp(Thickness[0], qdots[0], (SurfaceTemp(To, Thickness[0], qdots[0], h)), TList[1],k, x=Thickness[0])- TList[1])
+        for i in range(x-3+1): #Add 1 to account for final interface. -2 to account for boundaries
+            #TDistList.append(InterfaceTemp(Thickness[i+1], qdots[i+1], TList[i+1], TList[i+2],k)- TList[i+1])
+            TDistList.append(InterfaceTemp(Thickness[i+1], qdots[i+1], TDistList[i+1], TList[i+2],k,x=Thickness[i+1])- TList[i+2])
+        TDistList.append(InterfaceTemp(Thickness[-1], qdots[-1],TList[-2],(SurfaceTemp(Ti, Thickness[-1], qdots[-1], h)),k,x=Thickness[-1])- TList[-1]) #x is set equal to Thickness to give S2 instead of S1
         return TDistList
         #TDistList = [SurfaceTemp(To, Thickness1[0], qdots[0], h)-TList[0]]
         #for i in range(x-2+1): #Add 1 to account for final interface. -2 to account for boundaries
@@ -281,11 +301,15 @@ def GiveTSList4Solv(eta, Thickness, Materials, qdots, Ti, To, TList,h,k):#List o
 '''Initial Guess. This is used to start the numerical solver'''
 def GiveTListGuess(Materials):
     x = len(Materials)+1
-    TList = [300]*x
+    #TList=[]
+    #for i in range(x):
+    #    TList.append(316-i**2)
+    TList=[310]*x
     return TList
 
 TList = GiveTListGuess(Materials)
-
+print(TList)
+#moopbrgd
 #Ts1 = SurfaceTemp(To, Thickness1[0], dotq[0], 12)#-TList[0]
 Ts2 = InterfaceTemp(Thickness1[0], dotq[0], SurfaceTemp(To, Thickness1[0], dotq[0], 12), TList[1], 1)
 Ts3 = InterfaceTemp(Thickness1[1], dotq[1], TList[1], TList[2], 1)
@@ -297,7 +321,7 @@ Ts8 = InterfaceTemp(Thickness1[6], dotq[6], TList[6], TList[7], 1)
 Ts9 = InterfaceTemp(Thickness1[7], dotq[7], TList[7], TList[8], 1)
 Ts10 = InterfaceTemp(Thickness1[8], dotq[8], TList[8], TList[9], 1)
 Ts11 = InterfaceTemp(Thickness1[9], dotq[9], TList[9], TList[10], 1)
-Ts12 = InterfaceTemp(Thickness1[10], dotq[10], TList[10], SurfaceTemp(Ti, Thickness1[10], dotq[10], 12), 1)
+Ts12 = InterfaceTemp(Thickness1[10], dotq[10],SurfaceTemp(Ti, Thickness1[10], dotq[10], 12), TList[10], 1)
 #Ts13 = SurfaceTemp(Ti, Thickness1[10], dotq[10], 12)#-TList[11]'''
 
 '''
@@ -317,7 +341,7 @@ Ts12 = SurfaceTemp(Ti, Thickness1[10], dotq[10], 12)
 print('Test of manual GiveTSList4Solv', Ts2,Ts3,Ts4,Ts5)#,Ts6,Ts7,Ts8,Ts9,Ts10, Ts11,Ts12)#,Ts13)
 #print('Test of manual GiveTSList4Solv', Ts6,Ts7,Ts8,Ts9,Ts10, Ts11,Ts12)
 
-ListOTs = GiveTSList4Solv(eta, Thickness, Materials, dotq, Ti, To, TList,12,1)
+ListOTs = GiveTSList4Solv(eta, Thickness1, Materials, dotq, Ti, To, TList,12,1)
 print('List of T calcs',ListOTs)
 
 #MoopsNSons
@@ -339,7 +363,7 @@ start1 = time.time()
 Result = GiveSurfaceTemps(Materials)
 end1 = time.time()
 
-#print('result is',Result)
+print('result is',Result)
 print('Time to solve in seconds = ',end1-start1,'and minutes =',(end1-start1)/60)
 
 

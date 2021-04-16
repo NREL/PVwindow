@@ -33,6 +33,7 @@ from tmmPCECalc import VLT,GiveLayers,Spectra,GiveEInterp,TcellCalc,max_efficien
 #from colorpy import plots, ciexyz, colormodels #need to install colorpy to call all packages at once
 from time import time
 from statistics import stdev
+import CalculateVLTFromSpectrum as cvs
 
 #degree = np.pi/180
 
@@ -56,7 +57,7 @@ SnO2lowEBound = (.015,.045)
 SnO2lowEfatBound = (0.025,.075)
 SiO2Bound = (.012,.036)
 NiOBound = (.025,.075)#(.025,.1)
-AgBound = (.0130, .0160)
+AgBound = (.013, .017)
 TiO2lowEBound = (.020, .040)
 TiO2lowEfatBound = (.03,.09)
 BleachBound = (.180, .500)
@@ -101,11 +102,19 @@ DictTh={'GlassTh':GlassTh,'TiO2Th':TiO2Th,'FTOTh':FTOTh,'MAPITh':MAPITh,'AZOTh':
 To change the minimum allowed VLT, change the float in the return calculation
 To require a specific VLT value change the values in VLTc '''
 def VLTconstraint(Thickness):
+    '''V1''' 
     layers = GiveLayers(Thickness, Materials)
-    #VLTc = 
-    return VLT(layers)
+    #VLTc = VLT(layers)-0.5
+    VLTc = VLT(layers)
+    '''V2'''''''
+    #VLTc = cvs.getVLT(Transmission,lams)-.5
+    VLTc = cvs.getVLT(Transmission,lams)'''
+    print('VLT=',VLTc)
+
+    return VLTc
+
 #VLTc = {'type': 'ineq', 'fun': VLTconstraint}
-VLTc =  NonlinearConstraint(VLTconstraint, 0.50, 1.0)
+VLTc =  NonlinearConstraint(VLTconstraint, 0.5, 1.0)
 
 '''Constraint on SHGC. Input thickness is a placeholder to keep things consistent
 with the optimization function.Currently it operates based on global variables
@@ -114,7 +123,7 @@ Both vary with each iteration of MediumOptimize'''
 '''To change the constraint range, change the values in SHGCc'''
 '''
 def SHGCconstraint(Thickness):
-    return SHGC(Ts, Ti, To, Tcell, Ui)
+    return #SHGC(Ts, Ti, To, Tcell, Ui)
 SHGCc =  NonlinearConstraint(SHGCconstraint, 0.0, 0.5)
 '''
 
@@ -125,16 +134,16 @@ def MediumOptimize(Thickness):
     layers = GiveLayers(Thickness, Materials)
     SpectraCurves = Spectra(layers,AbsorberLayer)
     Absorbed = GiveEInterp(SpectraCurves['AbsByAbsorbers'])
-    #global Ts
-    #Ts = SpectraCurves['Ts']
+    #global Transmission
+    #Transmission = SpectraCurves['Ts']
     #global Tcell
     Tcell = TcellCalc(SpectraCurves['As'],eta, Ti,To,Absorbed,Ui, Uo, Rs, Rsh)
-    
+    #print('...thinking...')
     MaxEff = max_efficiency(eta,Absorbed,Tcell, Rs, Rsh)
-    
+    print(MaxEff)
     #endcalc=time()
     #print('sec/it',endcalc-startcalc)
-    return MaxEff
+    return  MaxEff   #  max_efficiency(eta,Absorbed,Tcell, Rs, Rsh)  
 
 
 
@@ -144,7 +153,7 @@ def dotheoptimize(Thickness):
     #Using minimize function so make the equation negative to find a maximum.
     func_to_minimize = lambda x : -MediumOptimize(x)
     #bnd = scipy.optimize.Bounds(.02, .1, keep_feasible=False)#If testing a single layer use this line to designate the bounds
-    return minimize(func_to_minimize, Thickness,method='SLSQP', bounds = Boundary, constraints = (VLTc), options={'ftol': 1e-6, 'eps': 1.4901161193847656e-08,'disp': True, 'finite_diff_rel_step': None})
+    return minimize(func_to_minimize, Thickness,method='SLSQP', bounds = Boundary, constraints = (VLTc),  options={'ftol': 1e-5, 'eps': 1.4901161193847656e-07,'disp': True, 'finite_diff_rel_step': None})
     #return scipy.optimize.minimize(func_to_minimize, Thickness,method='trust-constr', bounds = Boundary, constraints = (VLTc), options={'verbose':3})
 
 '''This function is intended to be a standalone optimizaiton function'''
@@ -177,7 +186,7 @@ VLTGc = NonlinearConstraint(VLTGconstraint, 0.5, 1)
 '''This function uses differential evolution to find a global maximum of the function.'''
 def GlobalOptimize(Thickness):
     func_to_minimize = lambda x : -MediumOptimize(x)
-    return differential_evolution(func_to_minimize, bounds = Boundary, constraints = (VLTGc)) 
+    return differential_evolution(func_to_minimize, bounds = Boundary, constraints = (VLTGc),) 
 
 '''This function uses differential annealing to to find a global maximum.'''
 def GlobalOptimize2(Thickness):
@@ -204,6 +213,14 @@ Ui = 8.3 #W/(m**2 *K)
 Uo = 17 #W/(m**2 *K)
 Rtot = 1/Ui
 
+'''
+layers = GiveLayers(Thickness, Materials)
+startnewvlt =time()
+NewVLT = tpc.getFancyVLT(layers)
+endnewvlt=time()
+print(NewVLT)
+print(endnewvlt-startnewvlt)
+'''
 
 #6 layers.time to calculate PCE from scratch in seconds =  8.253074884414673 Time to run optimizer in minutes =  10.35908164183298. nfev: 49
 #8 layers.time to calculate PCE from scratch in seconds =  5.444987773895264 Time to run optimizer in minutes =  12.90131440560023. nfev: 81
@@ -229,22 +246,24 @@ Rtot = 1/Ui
 #11 layers after changing constraint definition. 58 min. success. nit 23, nfev 264
 #11 layers after changing Boundary definition. 36.6 min. success. nit 14, nfev 168
 #" 23 and 62 minutes
+#New and imporoved VLT calc and paramters. 11 layers 20 minutes. nit 15 nfev 169. ftol e-4 eps e-7
+#+SHGCc, 18 min. fun =.08207, nit = 10, nfev -121, ftol e-4, eps e-6
 
 #___________________________________Pre Optimization______________________
 
-'''
+
 #This big block times the individual functions calculated during the optimization.
 #Used to identify which calculations take the most time.
 TcellT = 300
 startlayer=time()
-'''
+
 layers = GiveLayers(Thickness, Materials)
-'''
+
 endlayer = time()
 startspectra= time()
 spectra = Spectra(layers, AbsorberLayer)
 endspectra= time()
-'''
+
 startvlt =time()
 VLTtest = VLT(layers)
 endvlt=time()
@@ -268,15 +287,18 @@ endpmp=time()
 starttcell=time()
 TcellNew = TcellCalc(spectra['As'], eta, Ti,To, Absorbed, Ui, Uo, Rs, Rsh)
 endtcell=time()
-print('Time to calculate in sec: ','layers',endlayer-startlayer,'spectra',endspectra-startspectra,'vlt',endvlt-startvlt,'giveeinterp',endgiveeinterp-startgiveeinterp,'Q',endq-startq,'rr0',endrro-startrr0,'generated',endgenerated-startgenerated,'pmp',endpmp-startpmp,'tcell',endtcell-starttcell)
+startneovlt=time()
+neoVLT = cvs.getVLT(spectra['Ts'],lams)
+endneovlt=time()
+print('Time to calculate in sec: ','layers',endlayer-startlayer,'spectra',endspectra-startspectra,'vlt',endvlt-startvlt,'neovlt',endneovlt-startneovlt,'giveeinterp',endgiveeinterp-startgiveeinterp,'Q',endq-startq,'rr0',endrro-startrr0,'generated',endgenerated-startgenerated,'pmp',endpmp-startpmp,'tcell',endtcell-starttcell)
 '''
 #VLT can vary due to the way it is calculated.
 #This part caluclates VLT 5 times and lets you see how different they are.
-VLT1 = VLT(layers)
-VLT2 = VLT(layers)
-VLT3 = VLT(layers)
-VLT4 = VLT(layers)
-VLT5 = VLT(layers)
+VLT1 = cvs.getVLT(spectra['Ts'],lams)#VLT(layers)
+VLT2 =  cvs.getVLT(spectra['Ts'],lams)#VLT(layers)
+VLT3 =  cvs.getVLT(spectra['Ts'],lams)#VLT(layers)
+VLT4 =  cvs.getVLT(spectra['Ts'],lams)#VLT(layers)
+VLT5 =  cvs.getVLT(spectra['Ts'],lams)#VLT(layers)
 print('preop VLT',VLTtest,VLT1,VLT2,VLT3,VLT4,VLT5)
 print('Standard deviaiton of VLT is',stdev([VLTtest,VLT1,VLT2,VLT3,VLT4,VLT5]))
 
@@ -313,9 +335,30 @@ print('time to calculate PCE from scratch in seconds = ', TimePCE, 'Time to run 
 #print(WERT2)
 
 WERTinfo = GiveImportantInfo(WERT['x'], Materials, eta,Ti,To,Ui,Uo,Rs,Rsh,AbsorberLayer,0)
-print('WERTinfo = ', WERTinfo)
+#print('WERTinfo = ', WERTinfo)
 
+import CalculateVLTFromSpectrum as cvs
+WERTlayers = GiveLayers(WERT['x'],Materials)
+WERTspectra = Spectra(WERTlayers,AbsorberLayer)
+Ts = WERTspectra['Ts']
+WERTVLT1 =  cvs.getVLT(Ts,lams)#VLT(layers)
+WERTVLT2 =  cvs.getVLT(Ts,lams)#VLT(layers)
+WERTVLT3 =  cvs.getVLT(Ts,lams)#VLT(layers)
+WERTVLT4 =  cvs.getVLT(Ts,lams)#VLT(layers)
+WERTVLT5 =  cvs.getVLT(Ts,lams)#VLT(layers)
+WERTVLT6 =  cvs.getVLT(Ts,lams)#VLT(layers)
+WERTVLT7 =  cvs.getVLT(Ts,lams)#VLT(layers)
+print(WERTVLT1,WERTVLT2,WERTVLT3,WERTVLT4,WERTVLT5,WERTVLT6,WERTVLT7)
+print(sum((WERTVLT1,WERTVLT2,WERTVLT3,WERTVLT4,WERTVLT5,WERTVLT6,WERTVLT7))/7)
 
+WERTVLT01 = VLT(WERTlayers)
+WERTVLT02 = VLT(WERTlayers)
+WERTVLT03 = VLT(WERTlayers)
+WERTVLT04 = VLT(WERTlayers)
+WERTVLT05 = VLT(WERTlayers)
+WERTVLT06 = VLT(WERTlayers)
+print(WERTVLT01,WERTVLT02,WERTVLT03,WERTVLT04,WERTVLT05,WERTVLT06)
+print(sum((WERTVLT01,WERTVLT02,WERTVLT03,WERTVLT04,WERTVLT05,WERTVLT06))/6)
 
 
 #___________________________Global Optimization happens here___________________________________________#
@@ -331,8 +374,8 @@ print('Time to optimize globally in minutes = ',GlobalTime/60)
 #Time to optimize globally in minutes =  161.08489356835682,nfev: 1452,fun: -0.083127734,x: array([5.99999484e+03, 1.74480480e-01, 2.50000000e-02, 9.29653260e-01,2.84263201e-02, 2.03697117e-01, 2.99967137e+03, 5.99991107e+03,7.00000000e-02, 1.50100000e-02, 7.00000000e-02])
 GlobalWERTinfo = GiveImportantInfo(GlobalWERT['x'], Materials)
 print(GlobalWERTinfo)
-
-
+'''
+'''
 #This runs forever. Do not use--> Messed up VLT range.
 #If VLT Range cannot be reached with absorber type then it will not solve.
 start4 = time()
@@ -403,47 +446,4 @@ plt.show()
 
 
 #These are reports and other things saved for later
-'''
-Sim PCE for Optimization = 0.07380158488936082
-Time to calculate PCE in sec 7.238282203674316 PCE + VLT time is 12.648305654525757
-     fun: -0.06703179396020204
-     jac: array([ 2.85045244e-07,  6.75980037e-02,  1.22523040e-01, -8.67475091e-02,
-       -2.61362046e-05, -2.12060129e-03,  5.22006303e-09,  1.04717910e-08,
-       -1.59472300e-02,  7.02156329e-04,  3.53421123e-02])
- message: 'Iteration limit reached'
-    nfev: 1623
-     nit: 100
-    njev: 99
-  status: 9
- success: False
-       x: array([6.00009985e+03, 1.00100937e-01, 2.50197864e-02, 2.50062197e-01,
-       9.98394826e-02, 3.99961709e-01, 3.00099997e+03, 6.00010000e+03,
-       1.54782129e-02, 1.49900002e-02, 1.50001870e-02])
-time to calculate PCE from scratch in seconds =  7.238282203674316 Time to run optimizer in minutes =  368.06005317370096
-'''
-'''
-#9 layers
-Time to calculate PCE in sec 8.287193298339844 PCE + VLT time is 15.170353651046753
-     fun: -0.08317526229591261
-     jac: array([ 0.        , -0.00161149,  0.0749405 , -0.00355131,  0.00188867,
-        0.002923  ,  0.        ,  0.        , -0.00360171])
- message: 'Iteration limit reached'
-    nfev: 1261
-     nit: 100
-    njev: 97
-  status: 9
- success: False
-       x: array([5.99990072e+03, 1.75345112e-01, 2.50000000e-02, 1.00000000e+00,
-       4.11008923e-02, 1.00000000e-01, 3.00003627e+03, 5.99999780e+03,
-       4.50000000e-02])
-time to calculate PCE from scratch in seconds =  8.287193298339844 Time to run optimizer in minutes =  294.92025065024694
-Saving plot Rf_Color
-Saving plot T_Color
-Saving plot ChromaticityDiagram
-PCE =  0.08317526229591261 VLT =  0.35120585898644413 SHGC =  0.48559147951143977 Tcell =  315.3486267968904
-WERTinfo =  {'PCE': 0.08317526229591261, 'VLT': 0.35120585898644413, 'SHGC': 0.48559147951143977, 'Tcell': 315.3486267968904, 'Isc': 49.10362142061605, 'Voc': 1.9199529407123919, 'Imp': 48.077301875639684, 'Vmp': 1.7186435996917573, 'Pmp': 82.62774715901666}
-'''
-# Before trying to import individual functions.9layers....Time to calculate in sec:  layers 0.02490854263305664 spectra 5.854759693145752 vlt 5.4847846031188965 giveeinterp 0.0 Q 0.18932461738586426 rr0 0.0009965896606445312 generated 0.22520232200622559 pmp 0.19331121444702148 tcell 2.193720579147339
-
-
-#Need something to tchangggggeeeee herreeeee
+#PCE =  0.08324261113434049 VLT =  0.4560079972898518 SHGC =  0.5032511317369591 Tcell =  316.0491481068552

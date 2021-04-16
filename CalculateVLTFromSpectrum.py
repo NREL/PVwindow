@@ -9,7 +9,7 @@ Created on Tue Apr  6 14:44:40 2021
 This file takes a data file of transmission spectra and gives a new file
 containing the VLT for each spectrum
 
-Datafile format: .xlsx or.xls, First row is header, 1st column is wavlength in um
+Datafile format: .xlsx or.xls, First row is header, 1st column is wavlength in nm
 All other rows are intensities of transmission ranging from 0-100
 If the datafile has trans intensity from 0-1, go to getVLT, Transmission, 
 and change TS/100 to TS
@@ -33,12 +33,14 @@ and change TS/100 to TS
 
 
 
-from numpy import array
+from numpy import array, where
 import pandas as pd
 from scipy.interpolate import interp1d
 import sys
 assert sys.version_info >= (3,6), 'Requires Python 3.6+'
 import vegas
+from wpv import Layer, Stack
+
 
 
 
@@ -66,20 +68,21 @@ def AM15GandPER():
     
     return AMPER
 
-'''
+
 AMPER = AM15GandPER()
 AM15G = AMPER[0]
 cieplf = AMPER[1]
 
-#I perform the VLT calculation when given a spectrum and associated wavelength range
-def getVLT(TS,lamrange):
+'''I perform the VLT calculation when given a spectrum and associated wavelength range'''
+'''TSScale tells what the transmission values can span. eg 0-100 set as 100, 0-1 set as 1'''
+def getVLT(TS,lamrange, TSScale = 1):
     integ = vegas.Integrator([lamrange])
-    Transmission = interp1d(lamrange,TS/100)
-    numerator = integ(lambda lam: AM15G(lam)*cieplf(lam)*Transmission(lam), nitn=10, neval=200)[0]
-    denominator = integ(lambda lam: AM15G(lam)*cieplf(lam), nitn=10, neval=200)[0]
+    Transmission = interp1d(lamrange,TS/TSScale)
+    numerator = integ(lambda lam: AM15G(lam)*cieplf(lam)*Transmission(lam), nitn=10, neval=300)[0]
+    denominator = integ(lambda lam: AM15G(lam)*cieplf(lam), nitn=10, neval=300)[0]
     VLT = numerator/denominator
     return VLT.mean
-'''
+
 
 
 '''I perform the VLT calculation when given:
@@ -87,8 +90,8 @@ def getVLT(TS,lamrange):
 def getVLTComplete(TS,lamrange,AM15G,cieplf):
     integ = vegas.Integrator([lamrange])
     Transmission = interp1d(lamrange,TS/100)
-    numerator = integ(lambda lam: AM15G(lam)*cieplf(lam)*Transmission(lam), nitn=10, neval=200)[0]
-    denominator = integ(lambda lam: AM15G(lam)*cieplf(lam), nitn=10, neval=200)[0]
+    numerator = integ(lambda lam: AM15G(lam)*cieplf(lam)*Transmission(lam), nitn=10, neval=700)[0]
+    denominator = integ(lambda lam: AM15G(lam)*cieplf(lam), nitn=10, neval=700)[0]
     VLT = numerator/denominator
     return VLT.mean
 
@@ -110,11 +113,13 @@ def BuildVLTList(Data):
 
 
 '''I import a data file given a location and file name, extract the column names, and neatly package it'''
+'''I also convert negative transmission values to 0''' 
 def ImportDataFile(DataFileLocation):
     Data = pd.read_excel(DataFileLocation)
     ColName = list(Data.columns)
     ColName.pop(0)
     Data = array(Data)
+    Data = where(Data < 0, 0, Data)
     return {'Data':Data,'ColName':ColName}
 
 
@@ -140,7 +145,14 @@ def GiveMeVLTFile(DataFileLocation, OutputTitle):
     ExportVLTData(OutputTitle,Data['ColName'],VLTList)
     return
 
+#Data = ImportDataFile('./VLT_Data/TransH2OMeOH_041421.xlsx')
+#Data = pd.read_excel('./VLT_Data/Transparent_KS_device_IZO_10.xlsx')
+
+
 #GiveMeVLTFile(DataFileLocation,OutputTitle)
-#GiveMeVLTFile('./Data/TransmissionSpectra.xlsx','./TestFile')
+#GiveMeVLTFile('./VLT_Data/BAR2115_1_MeOH_TransmissionData.xlsx','./VLT_Data/VLT_Output/BAR2115_1_MeOH_VLTData')
+#GiveMeVLTFile('./VLT_Data/BAR2115_2_H2O_TransmissionData.xlsx','./VLT_Data/VLT_Output/BAR2115_2_H2O_VLTData')
+#GiveMeVLTFile('./VLT_Data/Transparent_KS_device_IZO_10.xlsx','./VLT_Data/VLT_Output/Transparent_KS_device_IZO_10_VLTData')
+#GiveMeVLTFile('./VLT_Data/DeviceTransmissionData.xlsx','./VLT_Data/VLT_Output/DeviceVLTData')
 
-
+#Data = where(Data < 0, 0, Data)
