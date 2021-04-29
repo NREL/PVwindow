@@ -16,7 +16,7 @@ Created on Thu Mar  4 12:24:50 2021
 from wpv import Layer, Stack
 #import scipy.interpolate, scipy.integrate, pandas, sys
 #import scipy
-from scipy.optimize import minimize, differential_evolution, NonlinearConstraint, dual_annealing, Bounds
+from scipy.optimize import minimize, differential_evolution, NonlinearConstraint, dual_annealing#, Bounds
 #from numericalunits import W, K, nm, m, cm, s, eV, meV, V, mA, c0, hPlanck, kB, e, A, ohm
 #import sympy
 #import sympy.solvers.solvers
@@ -43,8 +43,8 @@ import CalculateVLTFromSpectrum as cvs
 #lams = np.linspace(0.3,2.5,num=num_lams) #um
 
 
-'''We are boundary conditions corresponding to each material type'''
-'''Can be changed to tune optimization range'''
+'''We are boundary conditions corresponding to each material type
+Can be changed to tune optimization range. All values are in um'''
 GlassBound = (5999.9,6000.1)
 TiO2Bound = (0.0250,.0750)#(0.025,.1)
 FTOBound = (0.10,0.30)
@@ -57,7 +57,7 @@ SnO2lowEBound = (.015,.045)
 SnO2lowEfatBound = (0.025,.075)
 SiO2Bound = (.012,.036)
 NiOBound = (.025,.075)#(.025,.1)
-AgBound = (.013, .017)
+AgBound = (.0130, .0170)
 TiO2lowEBound = (.020, .040)
 TiO2lowEfatBound = (.03,.09)
 BleachBound = (.180, .500)
@@ -67,9 +67,11 @@ IRBound = (.030, .12)
 MAPBrBound = (.250,1)
 EVABound = (2999.9,3000.1)
 #PTAApolymer
+'''This dictionary is used for auto-generating a list of bounds using tpc.GiveBounds'''
 DictBound={'GlassBound':GlassBound,'TiO2Bound':TiO2Bound,'FTOBound':FTOBound,'MAPIBound':MAPIBound,'AZOBound':AZOBound,'ITOBound':ITOBound,'ITOlowEBound':ITOlowEBound,'SnO2Bound':SnO2Bound,'SnO2lowEBound':SnO2lowEBound,'SnO2lowEfatBound':SnO2lowEfatBound,'SiO2Bound':SiO2Bound,'NiOBound':NiOBound,'AgBound':AgBound,'TiO2lowEBound':TiO2lowEBound,'TiO2lowEfatBound':TiO2lowEfatBound,'BleachBound':BleachBound,'ClAlPcBound':ClAlPcBound,'C60Bound':C60Bound,'IRBound':IRBound,'MAPBrBound':MAPBrBound,'EVABound':EVABound}
 
-#Thicknesses
+'''We are the input thicknesses for each material. These can be changed to any desired value,
+however they must be within the bounds above for the program to run correctly. All values are in um'''
 GlassTh = 6000
 TiO2Th = 0.050
 FTOTh = 0.250
@@ -91,7 +93,7 @@ C60Th = 0.200
 IRTh = 0.060
 MAPBrTh = 0.500
 EVATh = 3000
-
+'''This dictionary is used for auto-generating a list of thicknesses using tpc.GiveThicks'''
 DictTh={'GlassTh':GlassTh,'TiO2Th':TiO2Th,'FTOTh':FTOTh,'MAPITh':MAPITh,'AZOTh':AZOTh,'ITOTh':ITOTh,'ITOlowETh':ITOlowETh,'SnO2Th':SnO2Th,'SnO2lowETh':SnO2lowETh,'SnO2lowEfatTh':SnO2lowEfatTh,'SiO2Th':SiO2Th,'NiOTh':NiOTh,'AgTh':AgTh,'TiO2lowETh':TiO2lowETh,'TiO2lowEfatTh':TiO2lowEfatTh,'BleachTh':BleachTh,'ClAlPcTh':ClAlPcTh,'C60Th':C60Th,'IRTh':IRTh,'MAPBrTh':MAPBrTh,'EVATh':EVATh}
 
 
@@ -99,24 +101,25 @@ DictTh={'GlassTh':GlassTh,'TiO2Th':TiO2Th,'FTOTh':FTOTh,'MAPITh':MAPITh,'AZOTh':
 #_________________________________Here I add Optimization Functionanilty___________________________________#
 
 '''Constraint on VLT
-To change the minimum allowed VLT, change the float in the return calculation
-To require a specific VLT value change the values in VLTc '''
+To change the acceptable VLT range, change the values in VLTc. VLTc is a scipy.optimize nonlinear constraint object '''
 def VLTconstraint(Thickness):
     '''V1''' 
     layers = GiveLayers(Thickness, Materials)
     #VLTc = VLT(layers)-0.5
-    VLTc = VLT(layers)
+    VLTcalc = VLT(layers)
     '''V2'''''''
     #VLTc = cvs.getVLT(Transmission,lams)-.5
     VLTc = cvs.getVLT(Transmission,lams)'''
-    print('VLT=',VLTc)
+    print('VLT=',VLTcalc)
 
-    return VLTc
+    return VLTcalc
 
 #VLTc = {'type': 'ineq', 'fun': VLTconstraint}
 VLTc =  NonlinearConstraint(VLTconstraint, 0.5, 1.0)
 
-'''Constraint on SHGC. Input thickness is a placeholder to keep things consistent
+
+'''Constraint on SHGC. Does not seem to function
+ Input thickness is a placeholder to keep things consistent
 with the optimization function.Currently it operates based on global variables
 since the only variables that change are Tcell and Ts.
 Both vary with each iteration of MediumOptimize'''
@@ -127,7 +130,8 @@ def SHGCconstraint(Thickness):
 SHGCc =  NonlinearConstraint(SHGCconstraint, 0.0, 0.5)
 '''
 
-'''This function gets optimized. Returns PCE as a funciton of layer thickness'''
+'''This function gets optimized. Returns PCE as a function of layer thickness. Units are watts
+It prints the PCE vlaue everytime it is run. Allows for monitoring of optimization progression'''
 def MediumOptimize(Thickness):
     #startcalc = time()
     
@@ -148,7 +152,7 @@ def MediumOptimize(Thickness):
 
 
 
-'''This function does the optimization step'''
+'''This function does the optimization step on MediumOptimize'''
 def dotheoptimize(Thickness):
     #Using minimize function so make the equation negative to find a maximum.
     func_to_minimize = lambda x : -MediumOptimize(x)
@@ -156,26 +160,37 @@ def dotheoptimize(Thickness):
     return minimize(func_to_minimize, Thickness,method='SLSQP', bounds = Boundary, constraints = (VLTc),  options={'ftol': 1e-5, 'eps': 1.4901161193847656e-07,'disp': True, 'finite_diff_rel_step': None})
     #return scipy.optimize.minimize(func_to_minimize, Thickness,method='trust-constr', bounds = Boundary, constraints = (VLTc), options={'verbose':3})
 
-'''This function is intended to be a standalone optimizaiton function'''
-'''All needed parameters are given as inputs rather than defined somewhere else in the code.'''
-'''This needs to be rewritten because the variable definitions don't work as intended'''
+'''This function is intended to be a standalone optimizaiton function. DOES NOT WORK AS INTENDED
+All needed parameters are given as inputs rather than defined somewhere else in the code.
+This needs to be rewritten because the variable definitions don't work as intended'''
 def TotalOptimize(eta, Thickness, Materials, Boundaries, AbsorberLayer, Ti = 300, To = 300, Ui = 8.3, Uo = 17, Rs = .02, Rsh = 1000, n = 1, Ns = 1):
+    global AbsorberLayer
     AbsorberLayer = AbsorberLayer
+    global Rs
     Rs = Rs
+    global Rsh
     Rsh =  Rsh
+    global eta
     eta = eta
+    global n
     n = n
+    global Ns
     Ns = Ns
+    global Ti
     Ti = Ti
+    global To
     To = To
+    global Ui
     Ui = Ui 
+    global Uo
     Uo = Uo
     return dotheoptimize(Thickness)
 
 
 #___________________________Global Optimization______________________________
 
-'''A VLT constraint for constraining the first global optimizer'''
+'''A VLT constraint for constraining the first global optimizer
+Does the same thing as VLTConstraint'''
 def VLTGconstraint(Thickness):
     layers = GiveLayers(Thickness, Materials)
     #VLTstack=Stack(layers)
@@ -183,22 +198,27 @@ def VLTGconstraint(Thickness):
     return VLTgc
 VLTGc = NonlinearConstraint(VLTGconstraint, 0.5, 1)
 
-'''This function uses differential evolution to find a global maximum of the function.'''
+'''This function uses differential evolution to find a global maximum of the MediumOptimize function. Gives PCE.'''
 def GlobalOptimize(Thickness):
     func_to_minimize = lambda x : -MediumOptimize(x)
-    return differential_evolution(func_to_minimize, bounds = Boundary, constraints = (VLTGc),) 
+    return differential_evolution(func_to_minimize, bounds = Boundary, constraints = (VLTGc)) 
 
-'''This function uses differential annealing to to find a global maximum.'''
+'''This function uses differential annealing to to find a global maximum of MediumOptimize. Gives PCE.'''
 def GlobalOptimize2(Thickness):
     func_to_minimize = lambda x : -MediumOptimize(x)
     return dual_annealing(func_to_minimize, bounds = Boundary)
 
+#Things to look at-> boundary definitions
+
 
 #_____________________________________________Operational Area__________________________________________________#
-#This stuff is used to control the optimization 
+
+'''This stuff is used to control the optimization'''
 Materials = [Glass,FTO,TiO2,MAPBr,NiO,ITO,EVA,Glass,TiO2lowE,Ag,TiO2lowE]
 Thickness = GiveThicks(Materials,DictTh)           #[GlassTh,FTOTh,TiO2Th,MAPBrTh,NiOTh,ITOTh,EVATh,GlassTh,TiO2lowETh,AgTh,TiO2lowETh]
 Boundary = GiveBounds(Materials,DictBound)
+#Boundary = [GlassBound,FTOBound,TiO2Bound,MAPBrBound,NiOBound,ITOBound,EVABound,GlassBound,TiO2lowEBound,AgBound,TiO2lowEBound]
+
 #Boundary = (GlassBound,FTOBound,TiO2Bound,MAPBrBound,NiOBound,ITOBound,EVABound,GlassBound,TiO2lowEBound,AgBound,TiO2lowEBound)
 AbsorberLayer = 4
 AbsorberBoundary = MAPBrBound
@@ -209,8 +229,8 @@ n = 1 # diode ideality factor. Used in singlediode equaiton
 Ns = 1 #number of cells in series. Used in singlediode equaiton
 Ti = 300
 To = 300
-Ui = 8.3 #W/(m**2 *K) 
-Uo = 17 #W/(m**2 *K)
+Ui = 8.3 #W/(m**2 *K) . overall heat-transfer coefficient,
+Uo = 17 #W/(m**2 *K) . overall heat-transfer coefficient,
 Rtot = 1/Ui
 
 '''
@@ -221,6 +241,10 @@ endnewvlt=time()
 print(NewVLT)
 print(endnewvlt-startnewvlt)
 '''
+#Issues
+#Opening up the Ag boundary cuases VLT to go super low in older version
+
+
 
 #6 layers.time to calculate PCE from scratch in seconds =  8.253074884414673 Time to run optimizer in minutes =  10.35908164183298. nfev: 49
 #8 layers.time to calculate PCE from scratch in seconds =  5.444987773895264 Time to run optimizer in minutes =  12.90131440560023. nfev: 81
@@ -257,16 +281,17 @@ print(endnewvlt-startnewvlt)
 TcellT = 300
 startlayer=time()
 
-layers = GiveLayers(Thickness, Materials)
+layerst = GiveLayers(Thickness, Materials)
 
 endlayer = time()
 startspectra= time()
-spectra = Spectra(layers, AbsorberLayer)
+spectrat = Spectra(layerst, AbsorberLayer)
 endspectra= time()
 
 startvlt =time()
-VLTtest = VLT(layers)
+VLTtest = VLT(layerst)
 endvlt=time()
+
 '''
 startgiveeinterp=time()
 Absby=spectra['AbsByAbsorbers']
@@ -294,11 +319,11 @@ print('Time to calculate in sec: ','layers',endlayer-startlayer,'spectra',endspe
 '''
 #VLT can vary due to the way it is calculated.
 #This part caluclates VLT 5 times and lets you see how different they are.
-VLT1 = cvs.getVLT(spectra['Ts'],lams)#VLT(layers)
-VLT2 =  cvs.getVLT(spectra['Ts'],lams)#VLT(layers)
-VLT3 =  cvs.getVLT(spectra['Ts'],lams)#VLT(layers)
-VLT4 =  cvs.getVLT(spectra['Ts'],lams)#VLT(layers)
-VLT5 =  cvs.getVLT(spectra['Ts'],lams)#VLT(layers)
+VLT1 = cvs.getVLT(spectrat['Ts'],lams)#VLT(layers)
+VLT2 =  cvs.getVLT(spectrat['Ts'],lams)#VLT(layers)
+VLT3 =  cvs.getVLT(spectrat['Ts'],lams)#VLT(layers)
+VLT4 =  cvs.getVLT(spectrat['Ts'],lams)#VLT(layers)
+VLT5 =  cvs.getVLT(spectrat['Ts'],lams)#VLT(layers)
 print('preop VLT',VLTtest,VLT1,VLT2,VLT3,VLT4,VLT5)
 print('Standard deviaiton of VLT is',stdev([VLTtest,VLT1,VLT2,VLT3,VLT4,VLT5]))
 
@@ -307,7 +332,7 @@ print('Standard deviaiton of VLT is',stdev([VLTtest,VLT1,VLT2,VLT3,VLT4,VLT5]))
 
 #This gives useful information before optimizing.Good for comparing the effects of the optimizer on PV performance
 PreOpInfo = GiveImportantInfo(Thickness, Materials,eta,Ti,To,Ui,Uo,Rs,Rsh,AbsorberLayer,0)
-#print('PreOp Calculations give',PreOpInfo)
+print('PreOp Calculations give',PreOpInfo)
 
 
 
@@ -322,10 +347,11 @@ TimePCE = (end1-start1)
 print('Time to calculate PCE in sec', TimePCE, 'PCE + VLT time is', TimePCE+(endvlt-startvlt))
 
 start2 = time()
+'''Optimization is actually performed here'''
 WERT = dotheoptimize(Thickness)
-#WERT = TotalOptimize(0.6, Thickness, Materials, Boundary, 4)#For testing effect of local variables rather than global
-
 end2 = time()
+
+
 print(WERT)
 #TimePCE = (end1-start1)
 TimeOptimize = (end2 - start2)
@@ -442,6 +468,10 @@ ax.set_ylabel('TiO2 Thick')
 ax.set_zlabel('PCE(x, y)')
 plt.show()
 '''
+
+
+#Optimized   [6000, 0.175, 0.025, 1,0.0353, 0.1, 3000, 6000,0.04, 0.013, 0.02]
+#Unoptimized [6000, 0.25, 0.05, 0.5, 0.05, 0.2, 3000, 6000, 0.03, 0.015, 0.03]
 
 
 

@@ -43,28 +43,6 @@ inc_angle = 0.*degree
 num_lams = 500
 lams = np.linspace(0.3,2.5,num=num_lams)
 
-GlassBound = (5999.9,6000.1)
-TiO2Bound = (0.025,.1)
-FTOBound = (0.1,0.5)
-MAPIBound = (.06,.900)#.260)
-AZOBound = (.1,.4)
-ITOBound = (.1,.4)
-ITOlowEBound = (0.03,.15)
-SnO2Bound = (.025,.1)
-SnO2lowEBound = (.015,.06)
-SnO2lowEfatBound = (0.025,.1)
-SiO2Bound = (.012,.05)
-NiOBound = (.025,.1)
-AgBound = (.0149, .0151)
-TiO2lowEBound = (.015, .070)
-TiO2lowEfatBound = (.03,.12)
-BleachBound = (.180, .500)
-ClAlPcBound = (.150, .600)
-C60Bound = (.100,.400)
-IRBound = (.030, .12)
-MAPBrBound = (.250,1)
-EVABound = (2999,3001)
-
 GlassTh = 6000
 TiO2Th = .050
 FTOTh = .250
@@ -88,35 +66,32 @@ MAPBrTh = 0.500
 EVATh = 3000
 DictTh={'GlassTh':GlassTh,'TiO2Th':TiO2Th,'FTOTh':FTOTh,'MAPITh':MAPITh,'AZOTh':AZOTh,'ITOTh':ITOTh,'ITOlowETh':ITOlowETh,'SnO2Th':SnO2Th,'SnO2lowETh':SnO2lowETh,'SnO2lowEfatTh':SnO2lowEfatTh,'SiO2Th':SiO2Th,'NiOTh':NiOTh,'AgTh':AgTh,'TiO2lowETh':TiO2lowETh,'TiO2lowEfatTh':TiO2lowEfatTh,'BleachTh':BleachTh,'ClAlPcTh':ClAlPcTh,'C60Th':C60Th,'IRTh':IRTh,'MAPBrTh':MAPBrTh,'EVATh':EVATh}
 
-#When running all 11 layers, layers 7 and 8 explode to 28847K and 68045 K. ALl others are around 300K.
-#Layers 7 and 8 are EVA and GLass which are thick. THickness gets squared so ti explodes. Idk how to correct that.
-
 Materials = [Glass,FTO,TiO2,MAPBr]#,NiO,ITO,EVA,Glass,TiO2lowE,Ag,TiO2lowE]
 Thickness = np.array(tpc.GiveThicks(Materials, DictTh))
 Thickness1=np.array(Thickness)
 #Thickness*=1e-6
-Thickness1*=1e-6
-Thickness0=np.array(Thickness)
+Thickness1*=1e-6 #m
+Thickness0=np.array(Thickness) #um
 AbsorberLayer = 4
-AbsorberBoundary = MAPBrBound
 Rs = .002 #* ohm #series resistance
 Rsh = 1000 #* ohm #shunt resistance
 eta = 0.6
 n = 1
 Ns = 1
-Ti = 304
-To = 310
+Ti = 304 #K
+To = 316 #K
 Ui = 8.3 #W/(m**2 *K) 
 Uo = 17 #W/(m**2 *K)
 Rtot = 1/Ui
-h = 1000 #W/m**2
-k = 100 #W/(m*K)
+h = 100 #W/m**2
+k = .01 #W/(m*K)
 TList=[300,300,300,300,300,300,300,300,300,300,300,300]
 #L = layer thickness
 #Qinc = solar_constant
 #solar_constant = sum(Qlayers)
 
-'''I return an abosrbtance spectrum for each layer'''
+'''I return an abosrptance spectrum for each layer
+Input units for thickness must be um'''
 def GiveLayerAbs(Thickness,Materials):
     layers = tpc.GiveLayers(Thickness,Materials)
 
@@ -159,10 +134,16 @@ def GiveLayerAbs(Thickness,Materials):
 #d/dx(k*dT/dx)=qabs-qconv=qloss
 #boundaries T(xL)=TL, T(xR)=TR
 
-'''I return a list of qdots, 1 for each layer. Units are W/m^3'''
+'''I return a list of qdots, 1 for each layer. Units are W/m^3.
+The part with TAbsorber needs to be changed. TAbsorber is the temperature of the absorbing layer.
+currently it is just a number but it needs to be the actual calculated temperature of the absorbing layer.
+It will ultimatley come out of FunctionForSolving or GiveSurfaceTemps
+layerspectra requires thickness units of um while all other uses of thickness require m
+Basic calculation of qdot is Q/thickness'''
 def qdot(Materials, Thickness, eta, TList, AbsorberLayer):
     #Thickness0 = np.array(Thickness)
     #Thickness0 *= 1e6
+    '''Units for thickness in layerspectra must be um'''
     layerSpectra = GiveLayerAbs(Thickness0,Materials)
     #layerSpectraInterp = tpc.GiveEInterp(layerSpectra)
     #Need to change this temperature eventaully to integral of temeprature distributtion across absorber layer only.
@@ -221,24 +202,29 @@ def qdotSum(Materials, Thickness, eta, TcellAbsorber, AbsorberLayer):
     return QList/ThickSum
 '''
 
-'''I describe surface temperature facing in or out based on ambient temp: Tinf'''
+'''I describe surface temperature facing in or out based on ambient temp, Tinf.
+Equation is eq 3.46 from fundamentals of heat and mass transfer incropera'''
 def SurfaceTemp(Tinf, Thick, qdot, h):
     #Tease out h here from tmm data or something
     return Tinf + (qdot*Thick)/h
 
-'''I describe temperature of Ts1 between two layers.'''
-'''To find edge temperature, set Ts1 or Ts2 equal to SurfaceTemp'''
+'''I describe temperature of Ts1 or Ts2 between two layers.
+To solve for Ts1 set x = 0, to solve for Ts2 set x = Thick
+To find edge temperature, set Ts1 or Ts2 equal to SurfaceTemp
+Equation is a transformed version of eq 3.41 from fundamentals of heat and mass transfer incropera
+In incropera, x ranges from -1/2*Thick to +1/2*Thick. in the transformed version here, x ranges from 0 to Thick
+See Incropera for diagram'''
 def InterfaceTemp(Thick, qdot, Ts1, Ts2, k, x=0):
     #x=0
     LTD = (qdot*(1/2*Thick)**2/(2*k))*(1-((x-1/2*Thick)**2/(1/2*Thick)**2)) + ((Ts2-Ts1)/2)*(x-1/2*Thick)/(1/2*Thick) + (Ts1+Ts2)/2
-    #LTD = ((Ts2-Ts1)/2)*(x-1/2*Thick)/(1/2*Thick) + (Ts1+Ts2)/2
+    #LTD = ((Ts2-Ts1)/2) + (Ts1+Ts2)/2 = Ts2
     return LTD
 
 
 
 
 
-
+'''This stuff is all for verifying how GiveLayerAbs and qdot are working'''
 layerSpectra = GiveLayerAbs(Thickness,Materials)
 layer1 = tpc.GiveEInterp(layerSpectra[0])
 layer2 = tpc.GiveEInterp(layerSpectra[1])
@@ -272,16 +258,24 @@ print('qdots test are',dotq)
 
  
 '''Series of Equations
-This returns a set of equations that are used to clauclate the surface and interface temperatures of the solar cell'''
+This returns a set of equations that are used to calculate the surface and interface temperatures of the solar cell
+Uses a loop to generate the equations so it can handle an arbitrary number of layers (At least 2)
+
+This function produces a temperature distribution list (TDistList) that will give surface temps as follows-->
+The first equation gives the temp of the outside surface based on the first layer (Ts1 in InterfaceTemp). 
+The loop gives the surface temp on the right side of each layer (Ts2) starting with the first layer.
+The final equation gives the surface temperature on the inside of the building 
+The inside and outside surface temp equations are not in the loop becuase they must include the SurfaceTemp function
+in place of either Ts1 or Ts2'''
 def GiveTSList4Solv(eta, Thickness, Materials, qdots, Ti, To, TList,h,k):#List of surface temp calcs for solving
     x = len(Materials)
     if x == len(Thickness):
         #Figure out h or soemthing
         TDistList = [InterfaceTemp(Thickness[0], qdots[0], (SurfaceTemp(To, Thickness[0], qdots[0], h)), TList[1],k, x=0)- TList[0]]
-        TDistList.append(InterfaceTemp(Thickness[0], qdots[0], (SurfaceTemp(To, Thickness[0], qdots[0], h)), TList[1],k, x=Thickness[0])- TList[1])
-        for i in range(x-3+1): #Add 1 to account for final interface. -2 to account for boundaries
+        #TDistList.append(InterfaceTemp(Thickness[0], qdots[0], (SurfaceTemp(To, Thickness[0], qdots[0], h)), TList[1],k, x=Thickness[0])- TList[1])
+        for i in range(x-2+1): #Add 1 to account for final interface. -2 to account for boundaries
             #TDistList.append(InterfaceTemp(Thickness[i+1], qdots[i+1], TList[i+1], TList[i+2],k)- TList[i+1])
-            TDistList.append(InterfaceTemp(Thickness[i+1], qdots[i+1], TDistList[i+1], TList[i+2],k,x=Thickness[i+1])- TList[i+2])
+            TDistList.append(InterfaceTemp(Thickness[i], qdots[i], TList[i], TList[i+1],k,x=Thickness[i])- TList[i+1])
         TDistList.append(InterfaceTemp(Thickness[-1], qdots[-1],TList[-2],(SurfaceTemp(Ti, Thickness[-1], qdots[-1], h)),k,x=Thickness[-1])- TList[-1]) #x is set equal to Thickness to give S2 instead of S1
         return TDistList
         #TDistList = [SurfaceTemp(To, Thickness1[0], qdots[0], h)-TList[0]]
@@ -291,6 +285,9 @@ def GiveTSList4Solv(eta, Thickness, Materials, qdots, Ti, To, TList,h,k):#List o
         #return TDistList
     else:  
         raise ValueError ('layers and Thickness lengths do not match')
+        
+       
+        
 #Ideas for equations that might need to be added to this system:
 #1.1 Include a qdot funciton so it only needs to be performed once and the other equations work better
 #1.2 qdot has to remain a function since it depends on Tcell which is the final result
@@ -298,13 +295,14 @@ def GiveTSList4Solv(eta, Thickness, Materials, qdots, Ti, To, TList,h,k):#List o
 #2.2 Tcell average is something like the average of the sums of integrals of layer temp distributions.    
 #2.3 This will require another set of loops to generate the list of integrals
 
-'''Initial Guess. This is used to start the numerical solver'''
+'''Initial Guess. This is used to start the numerical solver. To change the starting value,
+adjust the numbers in the for loop, or switch to the commented out TList=[310]*x and adjust the temperature there'''
 def GiveTListGuess(Materials):
     x = len(Materials)+1
-    #TList=[]
-    #for i in range(x):
-    #    TList.append(316-i**2)
-    TList=[310]*x
+    TList=[]
+    for i in range(x):
+        TList.append(316-i**2)
+    #TList=[310]*x
     return TList
 
 TList = GiveTListGuess(Materials)
@@ -478,21 +476,27 @@ plt.show()
 
 SpecialPlotting
 xval = np.linspace(0,1,num=100)
+fudgefactor = lambda x: -(x-0.5)**2
+#PlotResult[3][0]*=fudgefactor(x-1)
 
 plt.figure()
+plt.xticks([0,1,2,3,4])
 plt.plot(xval,PlotResult[0][0],color='magenta',marker=None,label="$Layer1$")
-plt.plot(xval+1,PlotResult[1][0],color='gold',marker=None,label="$Layer2$")
+plt.plot(xval+1,PlotResult[1][0],color='black',marker=None,label="$Layer2$")
 plt.plot(xval+2,PlotResult[2][0],color='red',marker=None,label="$Layer3$")
 plt.plot(xval+3,PlotResult[3][0],color='blue',marker=None,label="$Layer4$")
-plt.plot(xval+4,PlotResult[4][0],color='gold',marker=None,label="$Layer2$")
-plt.plot(xval+5,PlotResult[5][0],color='red',marker=None,label="$Layer3$")
-plt.plot(xval+6,PlotResult[6][0],color='blue',marker=None,label="$Layer4$")
-plt.plot(xval+7,PlotResult[7][0],color='red',marker=None,label="$Layer3$")
-plt.plot(xval+8,PlotResult[8][0],color='blue',marker=None,label="$Layer4$")
-plt.plot(xval+9,PlotResult[9][0],color='gold',marker=None,label="$Layer2$")
-plt.plot(xval+10,PlotResult[10][0],color='red',marker=None,label="$Layer3$")
-plt.xlabel('Thickness, $\mu$m')
+#plt.xlim(0,4)
+#plt.plot(xval+4,PlotResult[4][0],color='gold',marker=None,label="$Layer2$")
+#plt.plot(xval+5,PlotResult[5][0],color='red',marker=None,label="$Layer3$")
+#plt.plot(xval+6,PlotResult[6][0],color='blue',marker=None,label="$Layer4$")
+#plt.plot(xval+7,PlotResult[7][0],color='red',marker=None,label="$Layer3$")
+#plt.plot(xval+8,PlotResult[8][0],color='blue',marker=None,label="$Layer4$")
+#plt.plot(xval+9,PlotResult[9][0],color='gold',marker=None,label="$Layer2$")
+#plt.plot(xval+10,PlotResult[10][0],color='red',marker=None,label="$Layer3$")
+#plt.xlabel('Thickness, $\mu$m')
+plt.xlabel('Layer')
 plt.ylabel('Temperature, K')
 plt.legend(loc = 'upper right')
 plt.show()
+
 

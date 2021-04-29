@@ -18,7 +18,8 @@ from wpv import Layer, Stack
 #import scipy.interpolate, scipy.integrate, pandas, sys
 from scipy.interpolate import interp1d
 from scipy.integrate import quad, trapz
-from scipy.optimize import fsolve, Bounds
+from scipy.optimize import fsolve#, Bounds
+import scipy.optimize
 from pandas import read_excel
 import sys
 #import scipy
@@ -36,14 +37,12 @@ import vegas
 
 # This whole thing uses microns for length
 
-'''We determine the incident angle of the sun shining on the cell'''
-
-
+'''We determine the incident angle of the sun shining on the cell. Input is in degrees'''
 def giveincangle(angle):
     degree = pi/180
     return angle*degree
 inc_angle = giveincangle(0)  
-'''We determine the size and scaling of the photon wavelength scale'''   
+'''We determine the size and scaling of the photon wavelength scale. Units are um'''   
 num_lams = 500
 lams = linspace(0.3,2.5,num=num_lams) #um
 
@@ -53,9 +52,22 @@ c0 = 299792458 #m/s #Speed of light
 hPlanck = 6.62607015e-34 #J*s   4.135667516e-15 #eV*s               
 kB = 1.380649e-23 #J/K    8.61733034e-5 #eV/K  
 
+'''Some units and terms'''
+'''Tcell, Ti, To are cell temperature, inside temp and outside temp. Always in kelvin'''
+'''Ui and Uo are overall heat-transfer coefficient ofr in side and outside. W/(m**2 *K)'''
+'''AbsorberLayer is a number indicating the photoactive layer. If the fourth layer is the PV layer, input is 4'''
+''''Rs is series resistance, Rsh is shunt resistance in ohms. See pveducation.org for more info''' 
+'''eta is the electron-hole pair extraction efficiency term. eta times all absorbed light in the PV layer gives the EQE'''
+'''n = diode ideality factor. Used in singlediode equation
+Ns = number of cells in series. Used in singlediode equation'''
+'''Rtot is total thermal resistance of the window'''
 
-'''We are all the different materials currently available'''
-'''Thickness is in microns'''
+
+
+
+
+'''We are all the different materials currently available
+Thickness is in microns'''
 def Glass(Thickness = 6000):
     return Layer(Thickness,'nkLowFeGlass','i')
 def TiO2(Thickness = 0.050):
@@ -100,8 +112,8 @@ def EVA(Thickness = 3000):
     return Layer(Thickness,'nkEVA','i')
 
 
-'''We are boundary conditions corresponding to each material type'''
-'''Can be changed to tune optimization range'''
+'''We are boundary conditions corresponding to each material type
+Can be changed to tune optimization range'''
 GlassBound = (5999,6001)
 TiO2Bound = (0.025,.1)
 FTOBound = (0.1,0.5)
@@ -136,8 +148,8 @@ def GiveLayers(Thickness,Materials):
     else:  
         raise ValueError ('layers and Thickness lengths do not match')
 
-'''I give a list of boundaries from a list of materials. Dict is a dictionary containing the boundary conditions'''
-'''All items in the dicitonary are labelled as 'Material'+'Bound'  '''
+'''I give a list of boundaries from a list of materials. Dict is a dictionary containing the boundary conditions
+All items in the dicitonary are labelled as 'Material'+'Bound'  '''
 '''
 def GiveBounds(Materials, DictBound):
     x = len(Materials)
@@ -147,7 +159,9 @@ def GiveBounds(Materials, DictBound):
     Bounds = array(Bounds)
     return Bounds
 '''
-'''I produce a Bounds object that defines the boundary conditions for optimization'''
+
+'''I produce a Bounds object that defines the boundary conditions for optimization
+The version above can be used to produce a list of bounds rather than an object'''
 
 def GiveBounds(Materials, DictBound):
     x = len(Materials)
@@ -157,11 +171,11 @@ def GiveBounds(Materials, DictBound):
         lb.append(DictBound[Materials[i].__name__ + 'Bound'][0])
     for i in range(x):
         ub.append(DictBound[Materials[i].__name__ + 'Bound'][1])
-    bounds = Bounds(lb,ub)
+    bounds = scipy.optimize.Bounds(lb,ub)
     return bounds
 
-'''I give a list of thicknesses from a list of materials. Dict is a dictionary containing the thickness values'''
-'''All items in the dicitonary are labelled as 'Material'+'Th'  '''
+'''I give a list of thicknesses from a list of materials. Dict is a dictionary containing the thickness values
+All items in the dicitonary are labelled as 'Material'+'Th'  '''
 def GiveThicks(Materials, DictTh):
     x = len(Materials)
     Th = []
@@ -169,8 +183,8 @@ def GiveThicks(Materials, DictTh):
         Th.append(DictTh[Materials[i].__name__ + 'Th'])
     return Th
 
-'''Calculates Spectra Based on the layers of the cell'''
-'''AbsorberLayer is an integer giving the position of the PV layer in the stack. Currently supports 1 PV layer'''
+'''Calculates Spectra Based on the layers of the cell
+AbsorberLayer is an integer giving the position of the PV layer in the stack. Currently supports 1 PV layer'''
 def Spectra(layers, AbsorberLayer):
     thicks = [inf]
     iorcs = ['i']
@@ -247,8 +261,9 @@ def VLT(layers):
     VLTstack=Stack(layers)
     return VLTstack.get_visible_light_transmission(lams,inc_angle)
 
-'''THis gives VLT as a single number. Skips object usage and eliminates
-need to recalculate AM15G and cieplf every iteration'''
+'''This gives VLT as a single number. eliminates
+need to recalculate AM15G and cieplf every iteration. Unclear if this will work for 
+optimization'''
 def getFancyVLT(layers):#,lamrange,inc_angle):
     integ = vegas.Integrator([lams])
     Trans=Stack(layers)
@@ -258,8 +273,8 @@ def getFancyVLT(layers):#,lamrange,inc_angle):
     return VLT.mean
 
 '''Gives minimum and maximum VLT based exclusively on the PV layer. 
-Only useful for judging VLT constraint for a given PV material'''
-'''Requires input of single absorber layer with a tuple of (lb,ub)'''
+Only useful for judging VLT constraint for a given PV material
+Requires input of single absorber layer with a tuple of (lb,ub)'''
 def GiveMinMaxVLT(AbsorberType, Bounds):
     minThick = GiveLayers([Bounds[0]], [AbsorberType]) 
     maxThick = GiveLayers([Bounds[1]], [AbsorberType])
@@ -283,7 +298,7 @@ def GiveMinMaxVLTFromMaterials(Materials, AbsorberLayer, Bounds):
 
 # ******************** Here I add PCE calculation *********************#
             
-
+'''This stuff imports a spreadsheet of the solar spectrum'''
 #worksheet = pandas.read_excel('https://www.nrel.gov/grid/solar-resource/assets/data/astmg173.xls')
 worksheet = read_excel('/Users/aduell/Desktop/CodeThings/pv-window-bem-master/pv-window-bem-master/Data/ASTMG173.xls')#('https://www.nrel.gov/grid/solar-resource/assets/data/astmg173.xls')
 #worksheet = pandas.read_excel('/Users/lwheeler/Code/pv-window-bem/Data/astmg173.xls')
@@ -296,18 +311,14 @@ AM15 = downloaded_array[1:, [0,2]]
 # The last line should be 4000.0, 7.1043E-03
 # print(AM15)
 
-
-Ephoton = hPlanck * c0 / lams *1e6 #J
-E_min = min(Ephoton) #J   energy units from hPlanck
-E_max = max(Ephoton) #J   energy units from hPlanck
-
-
 # Interpolate to get a continuous function which I will be able to do integrals on:
-
+'''Interpolated solar spectrum
+when using, inputs must be within 300-2500 nm'''
 AM15interp = interp1d(AM15[:,0]/1000, AM15[:,1])
-#This requires nm scale 300-2500
+
 
 # Here’s the plot, it looks correct:
+'''Plot of the solar spectrum for verification'''
 '''
 y_values = np.array([AM15interp(x) for x in lams])
 figure()
@@ -317,6 +328,12 @@ ylabel("Spectral intensity (W/m$^2$/nm)")
 title("Light from the sun");
 show()
 '''
+
+
+'''I convert wavelength to energy. E_min and max are used for integration limits '''
+Ephoton = hPlanck * c0 / lams *1e6 #J
+E_min = min(Ephoton) #J   energy units from hPlanck
+E_max = max(Ephoton) #J   energy units from hPlanck
 
 
 '''I give the number of photons per......'''
@@ -332,7 +349,8 @@ def Solar_Constant(Ephoton):
     return quad(PowerPerTEA,E_min,E_max, full_output=1)[0]
 # quad() is ordinary integration; full_output=1 is (surprisingly) how you hide
 # the messages warning about poor accuracy in integrating.
-'''This is the solar constant value. It is called by optimization'''
+'''This is the solar constant value. It is called by optimization and used in a variety of functions here
+Should always be ~1000'''
 solar_constant = Solar_Constant(Ephoton)
 
 '''I return an interpolated function of a spectrum relative to photon wavelength. Used for plotting'''
@@ -340,14 +358,14 @@ def GivelamsInterp(Parameter):
     Curve = Parameter.round(8)
     return interp1d(lams, Curve)
 
-'''I return an interpolated funciton of a spectrum relative to photon energy'''
+'''I return an interpolated function of a spectrum relative to photon energy'''
 def GiveEInterp(Parameter):
     Curve = Parameter.round(8)
     return interp1d(Ephoton, Curve)
 
-'''I give Q based on a given spectrum. Units are W/m^2'''
-'''Input is a spectrum interpolated with respect to E'''
-'''eta should only be used if looking at a PV layer. Otherwise it is set to 1'''
+'''I give Q based on a given spectrum. Units are W/m^2
+Input is a spectrum interpolated with respect to energy, E
+eta should only be used if looking at a PV layer. Otherwise it is set to 1'''
 def GiveQ(Spectra, eta = 1):#Spectra must be an interpolated function
         def integrand(E):
             return eta * Spectra(E) * PowerPerTEA(E)
@@ -369,14 +387,14 @@ def GivePhotons(Spectra, eta):#Spectra must be an interpolated function
 # Here I input the spectrum of photons absorbed by the absorber material (Absorbed)
 # and the electron-hole pair extraction efficiency (eta). EQE = eta * Absorbed
 
-'''I give the rate of recombination for the solar cell'''
+'''I give the rate of recombination for the solar cell, Units are photons/(s*m**2)'''
 def RR0(eta,Absorbed,Tcell):
     integrand = lambda E : eta * Absorbed(E) * (E)**2 / (exp(E / (kB * Tcell)) - 1)
     integral = quad(integrand, E_min, E_max, full_output=1)[0]
     return ((2 * pi) / (c0**2 * hPlanck**3)) * integral# / 1.60218e-19 #J/eV
 #units = photons/(s*m**2)
 
-'''I give the amount of energy converted to electricity in terms of photons'''
+'''I give the amount of energy converted to electricity in terms of photons, units are photons(s/m**2)'''
 def Generated(eta,Absorbed):
     integrand = lambda E : eta * Absorbed(E) * SPhotonsPerTEA(E)
 #    integral = quad(integrand, E_min, E_max, full_output=1)[0]
@@ -397,13 +415,18 @@ def Generated(eta,Absorbed):
 #    integral = quad(integrand, E_min, E_max, full_output=1)[0]
     return np.trapz(integrand, Ephoton)
 '''
-'''I use the single diode equation to return the max power of the cell'''
+
+'''I use the single diode equation to return the max power of the cell in watts
+Check PVlib documentation for details'''
 def Give_Pmp(eta, Absorbed, Rs, Rsh, Tcell, n = 1, Ns = 1):
     data = singlediode(Generated(eta, Absorbed)*q, RR0(eta, Absorbed,Tcell)*q, Rs, Rsh, n*Ns*kB*Tcell/q, ivcurve_pnts = 500)
     return data['p_mp']
 
-'''I calculate equilibrium tmperature of the cell assuming the cell is infinitely thin'''
-'''TotalAbs is the full absorptance of the stack, uninterpolated. Absorbed is PV layer interpolated'''
+'''I calculate equilibrium tmperature of the cell assuming the cell is infinitely thin
+TotalAbs is the full absorptance of the stack as an array of intensities, uninterpolated. 
+Absorbed is PV layer absorptance interpolated
+Temperature calculation is implicit so the numerical solver fsolve is used.
+This equation is derived from Wheeler and Wheeler Detailed Balance Analysis of Photovoltaic Windows'''
 def TcellCalc(TotalAbs, eta, Ti,To, Absorbed, Ui, Uo, Rs, Rsh):
     AbsTotal = GiveEInterp(TotalAbs)
     Qabs = GiveQ(AbsTotal)
@@ -411,8 +434,9 @@ def TcellCalc(TotalAbs, eta, Ti,To, Absorbed, Ui, Uo, Rs, Rsh):
     return fsolve(Temp, 300)[0]
 
 
-'''I use the single diode equation to produce an IV curve and power plot'''
-'''I also return related values such as Voc, Isc, and Pmp'''
+'''I use the single diode equation to produce an IV curve and power plot
+I also return related values such as Voc, Isc, and Pmp in units volts, amps, and watts
+See pvlib singlediode equation for more information'''
 def GiveIVData(eta, Absorbed, Rs, Rsh,Tcell, n = 1, Ns = 1):
     data = singlediode(Generated(eta, Absorbed)*q, RR0(eta, Absorbed, Tcell)*q, Rs, Rsh, n*Ns*kB*Tcell/q, ivcurve_pnts = 500)
 
@@ -429,6 +453,7 @@ def GiveIVData(eta, Absorbed, Rs, Rsh,Tcell, n = 1, Ns = 1):
     plot(Vvalues,Ivalues, label = 'IV')
     xlabel('Voltage, (V)')
     ylabel('Current (A) or Power (W/m^2)')
+    ylabel('Power (W/m^2)')
     P_values = array([Ivalues * Vvalues])
     plot(Vvalues , P_values.T, label = 'Power')
     ylim(-1, 150)
@@ -438,8 +463,10 @@ def GiveIVData(eta, Absorbed, Rs, Rsh,Tcell, n = 1, Ns = 1):
 
 
 
-'''I give the solar heat gain coefficient'''
-'''Ts is the transmission spectra. Must be a list of intensities, not an interpolated function'''
+'''I give the solar heat gain coefficient. unitless numebr between 0 and 1
+Ts is the transmission spectra. Must be a list of intensities, not an interpolated function
+This equation comes form a combination of Wheeler and Wheeler Detailed Balance Analysis of Photovoltaic Windows
+and equation 3.18 from Fundamentals of Heat and Mass Transfer 6ed Incropera'''
 def SHGC(Ts, Ti, To, Tcell, Ui):
     #Tcell = TcellCalc(As,Ti,To,eta,Absorbed)
     Rtot = 1/Ui #This is approximate because Ui is assumed
@@ -449,15 +476,15 @@ def SHGC(Ts, Ti, To, Tcell, Ui):
     return (Qtrans + Ui*(Tcell-Ti) - ((To-Ti)/Rtot))/solar_constant
 
 '''I give max efficiency also called PCE'''
-'''Absorbed must be an interpolated function of the absorption spectra of the PV layer'''
+'''Absorbed must be an interpolated function of the absorption spectrum of the PV layer'''
 def max_efficiency(eta,Absorbed,Tcell, Rs, Rsh):
     #Tcell = TcellCalc(As,Ti,To,eta,Absorbed)
     return Give_Pmp(eta, Absorbed, Rs, Rsh, Tcell) / solar_constant
 
 '''I give important info about a solar cell such as PCE, SHGC, Temperature, etc'''
 def GiveImportantInfo(Thickness, Materials,eta,Ti,To,Ui,Uo,Rs,Rsh,AbsorberLayer,Angle=0):
-    #global inc_angle
-    #inc_angle = giveincangle(Angle)
+    global inc_angle
+    inc_angle = giveincangle(Angle)
     
     layers = GiveLayers(Thickness,Materials)
     
@@ -492,18 +519,20 @@ def GiveImportantInfo(Thickness, Materials,eta,Ti,To,Ui,Uo,Rs,Rsh,AbsorberLayer,
     plot(lams,sanities,color='gold',marker=None,label="R+A+T")
     plot(lams,VLTSpectrum(layers).cieplf(lams),color='red',marker=None,label="photopic")
     xlabel('wavelength, $\mu$m')
+    ylabel('Intensity')
     legend(loc = 'upper right')
     show()
     
-    #EphotoneV = Ephoton*6.242e+18 
+    EphotoneV = Ephoton*6.241509e+18 
     figure()
-    plot(Ephoton, Ts, color='magenta',marker=None,label="$T$")
-    plot(Ephoton, Rfs,color='green',marker=None,label="$R_f$")
-    plot(Ephoton, Rbs,color='purple',marker=None,label="$R_b$")
-    plot(Ephoton, AbsByAbsorbers,color='black',marker=None,label="Abs")
+    plot(EphotoneV, Ts, color='magenta',marker=None,label="$T$")
+    plot(EphotoneV, Rfs,color='green',marker=None,label="$R_f$")
+    plot(EphotoneV, Rbs,color='orange',marker=None,label="$R_b$")
+    plot(EphotoneV, AbsByAbsorbers,color='black',marker=None,label="Abs")
     #plot(Ephoton,tpc.VLTSpectrum(layers).cieplf(lams),color='red',marker=None,label="photopic")
     legend(loc = 'upper right')
-    xlabel('Energy, J')
+    xlabel('Energy, eV')
+    ylabel('Intensity')
     show()
 
     pvc.GiveColorSwatch(Ts, Rfs)
