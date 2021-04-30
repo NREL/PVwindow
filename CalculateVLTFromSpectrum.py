@@ -56,7 +56,8 @@ import sys
 assert sys.version_info >= (3,6), 'Requires Python 3.6+'
 import vegas
 #import tmmPVColor as pvc
-from colorpy import plots, ciexyz, colormodels #need to install colorpy to call all packages at once
+from colorpy import ciexyz, colormodels #need to install colorpy to call all packages at once. 
+#If colorpy doesnt work, go to the file and change import 'blank' to from . import 'blank'
 #from wpv import Layer, Stack
 
 
@@ -97,8 +98,8 @@ cieplf = AMPER[1]
 
 
 '''I perform the VLT calculation when given a spectrum and associated wavelength range.
-Adapted from wpv code by Vince Wheeler'''
-'''TSScale tells what the transmission values can span. eg 0-100 set as 100, 0-1 set as 1'''
+Adapted from wpv code by Vince Wheeler
+TSScale tells what the transmission values can span. eg 0-100 set as 100, 0-1 set as 1'''
 def getVLT(TS,lamrange, TSScale = 1):
     integ = vegas.Integrator([lamrange])
     Transmission = interp1d(lamrange,TS/TSScale)
