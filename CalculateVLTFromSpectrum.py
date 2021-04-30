@@ -213,9 +213,9 @@ def GiveMeVLTFile(DataFileLocation, OutputTitle):
     ExportVLTData(OutputTitle,Data['ColName'],VLTList)
     return
 
-#Data = ImportDataFile('./VLT_Data/TransH2OMeOH_041421.xlsx')
+#Data = ImportDataFile('./VLT_Data/ColorBalanceSpectra.xlsx')
 #Data = pd.read_excel('./VLT_Data/Transparent_KS_device_IZO_10.xlsx')
-
+#Data = Data['Data']
 
 #GiveMeVLTFile(DataFileLocation,OutputTitle)
 #GiveMeVLTFile('./VLT_Data/BAR2115_1_MeOH_TransmissionData.xlsx','./VLT_Data/VLT_Output/BAR2115_1_MeOH_VLTData')
@@ -224,5 +224,5 @@ def GiveMeVLTFile(DataFileLocation, OutputTitle):
 #GiveMeVLTFile('./VLT_Data/DeviceTransmissionData.xlsx','./VLT_Data/VLT_Output/DeviceVLTData')
 #GiveMeVLTFile('./VLT_Data/Static_PV_Semitransparant_TransmissionData_Kevin.xlsx','./VLT_Data/VLT_Output/Static_PV_Semitransparant_VLTData_Kevin')
 
-GiveMeVLTFile('./VLT_Data/TransmissionSpectra.xlsx', './VLT_Data/VLT_Output/AddCIETest')
+GiveMeVLTFile('./VLT_Data/ColorBalanceSpectra.xlsx', './VLT_Data/VLT_Output/ColorBalanceVLTandColorData')
     
