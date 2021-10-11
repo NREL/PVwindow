@@ -14,7 +14,10 @@ PVwindow is written entirely in Python. The intensity of light that is absorbed 
 
 ## Installation
 
-
+### Dependencies
+ - numpy
+ - tmm
+ - colorpy
 
 ## Usage
 
