@@ -170,11 +170,11 @@ VLT=VLTstack.get_visible_light_transmission(lams,inc_angle)
 print("VLT =",VLT)
 #
 
-X = np.transpose([lams,AbsByAbsorbers])
-np.savetxt('./Output/AbsByAbsorber.txt',X,delimiter=',',header="wavelength [micron], AbsByAbsorber [1]")
+#X = np.transpose([lams,AbsByAbsorbers])
+#np.savetxt('./Output/AbsByAbsorber.txt',X,delimiter=',',header="wavelength [micron], AbsByAbsorber [1]")
 
-Y = np.transpose([lams,Ts,Rfs,Rbs])
-np.savetxt('./Output/TRfRb.txt',Y,delimiter=',',header="wavelength [micron], T [1], R_f [1], R_b [1]")
+#Y = np.transpose([lams,Ts,Rfs,Rbs])
+#np.savetxt('./Output/TRfRb.txt',Y,delimiter=',',header="wavelength [micron], T [1], R_f [1], R_b [1]")
 
 # This is for when there are 2 layers contributing to the AbsByAbsorber:
 #Z = np.transpose([lams,IREQEs])

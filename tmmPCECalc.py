@@ -300,7 +300,7 @@ def GiveMinMaxVLTFromMaterials(Materials, AbsorberLayer, Bounds):
             
 '''This stuff imports a spreadsheet of the solar spectrum'''
 #worksheet = pandas.read_excel('https://www.nrel.gov/grid/solar-resource/assets/data/astmg173.xls')
-worksheet = read_excel('/Users/aduell/Desktop/CodeThings/pv-window-bem-master/pv-window-bem-master/Data/ASTMG173.xls')#('https://www.nrel.gov/grid/solar-resource/assets/data/astmg173.xls')
+worksheet = read_excel('./Data/ASTMG173.xls')#('https://www.nrel.gov/grid/solar-resource/assets/data/astmg173.xls')
 #worksheet = pandas.read_excel('/Users/lwheeler/Code/pv-window-bem/Data/astmg173.xls')
 downloaded_array = array(worksheet)
 

@@ -224,5 +224,5 @@ def GiveMeVLTFile(DataFileLocation, OutputTitle):
 #GiveMeVLTFile('./VLT_Data/DeviceTransmissionData.xlsx','./VLT_Data/VLT_Output/DeviceVLTData')
 #GiveMeVLTFile('./VLT_Data/Static_PV_Semitransparant_TransmissionData_Kevin.xlsx','./VLT_Data/VLT_Output/Static_PV_Semitransparant_VLTData_Kevin')
 
-GiveMeVLTFile('./VLT_Data/ColorBalanceSpectra.xlsx', './VLT_Data/VLT_Output/ColorBalanceVLTandColorData')
+#GiveMeVLTFile('./VLT_Data/ColorBalanceSpectra.xlsx', './VLT_Data/VLT_Output/ColorBalanceVLTandColorData')
     
