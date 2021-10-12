@@ -14,10 +14,16 @@ PVwindow is written entirely in Python. The intensity of light that is absorbed 
 
 ## Installation
 
+PVwindow is a pure python code. It can be cloned into your local directory and run as long as a local installation of python is available to run it. It does depend on a few libraries, all readily available.
+
 ### Dependencies
- - numpy
- - tmm
- - colorpy
+ - numpy (https://pypi.org/project/numpy/)
+ - tmm (https://pypi.org/project/tmm/)
+ - colorpy (pypi repo out-dated... full python 3 version included in this repo)
+ - vegas (https://pypi.org/project/vegas/)
+ - pandas (https://pypi.org/project/pandas/)
+ - scipy (https://pypi.org/project/scipy/)
+ - matplotlib (https://pypi.org/project/matplotlib/)
 
 ## Usage
 
