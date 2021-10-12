@@ -27,11 +27,7 @@ PVwindow is a pure python code. It can be cloned into your local directory and r
 
 ## Usage
 
-The code is organized such that a simulation script can be constructed use two types of objects: layer and stack. Layer objects store all information necessary for it to be fully described for TMM solution, its: location in the stack, thickness, and complex refractive index. A stack object defines the order of layers in the set of layers defining the window. Properties of the photovoltaic window can be processed once the stack is constructed, including:
-- visible light transmission (VLT)
-- solar heat gain coefficient (SHGC)
-- power conversion efficiencey (PCE)
-- cell temperature
+The code is organized such that a simulation script can be constructed use two types of objects: layer and stack. Layer objects store all information necessary for it to be fully described for TMM solution, its: location in the stack, thickness, and complex refractive index. A stack object defines the order of layers in the set of layers defining the window. Properties of the photovoltaic window can be processed once the stack is constructed.
 
 ### Example
 
