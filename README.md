@@ -89,6 +89,22 @@ plt.ylabel(r"R, A, or T")
 plt.legend(loc='upper right')
 plt.show()
 ```
+Further, the user can calculate numerous interesting quantities with a single function call after defining a number of parameters defining the PV absorber type and the environment surrounding the window.
+```
+eta = 1 #electron-hole pair extraction efficienc
+Ti = 298 #inside temperature
+To = 311 #outside temperature
+Ui = 8.3 #overall heat transfer coefficient of layers inside active layer
+Uo = 17 #same for outside
+Rs = 0 #series resistence
+Rsh = 1e5 #shunt resistence
+AbsorberLayer = 3 #which layer is PV absorber layer
+
+stuff = wpv.get_performance_characteristics(stack,eta,Ti,To,Ui,Uo,Rs,Rsh,AbsorberLayer,iang)
+
+print(stuff)
+```
+The result is
 
 [^1]: https://pubs.acs.org/doi/full/10.1021/acsenergylett.9b01316
 [^2]: Code available here: https://github.com/sbyrnes321/tmm. Theory described here: https://arxiv.org/abs/1603.02720
