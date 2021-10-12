@@ -90,6 +90,7 @@ plt.legend(loc='upper right')
 plt.show()
 ```
 ![plot](./github_fig1.png)
+
 Further, the user can calculate numerous interesting quantities with a single function call after defining a number of parameters defining the PV absorber type and the environment surrounding the window.
 ```
 eta = 1 #electron-hole pair extraction efficienc
