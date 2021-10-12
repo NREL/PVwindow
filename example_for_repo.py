@@ -7,9 +7,6 @@ import numpy as np
 import wpv
 import matplotlib.pyplot as plt
 
-      
-num_lams = 200
-lams = np.linspace(0.3,2.5,num=num_lams)
 
 
 Glass = wpv.Layer(4000,'nkLowFeGlass','i')
@@ -23,6 +20,10 @@ EVA = wpv.Layer(1500,'nkEVA','i')
 layers = [Glass,FTO,MAPI,EVA,Glass,TiO2lowE,Ag,TiO2lowE]
 
 stack = wpv.Stack(layers)
+
+
+num_lams = 200
+lams = np.linspace(0.3,2.5,num=num_lams)
 
 
 Rfs = []
@@ -43,20 +44,6 @@ Rfs = np.array(Rfs)
 As = np.array(As)
 Ts = np.array(Ts)
 
-eta = 1
-Ti = 298
-To = 311
-Ui = 8.3
-Uo = 17
-Rs = 0
-Rsh = 1e5
-AbsorberLayer = 3
-
-
-stuff = wpv.get_performance_characteristics(stack,eta,Ti,To,Ui,Uo,Rs,Rsh,AbsorberLayer,iang)
-
-print(stuff)
-
 plt.figure()
 plt.plot(lams,Rfs,label=r"$R$")
 plt.plot(lams,As,label=r"$A$")
@@ -66,3 +53,19 @@ plt.xlabel(r"$\lambda$, micron")
 plt.ylabel(r"R, A, or T")
 plt.legend(loc='upper right')
 plt.show()
+
+eta = 1 #electron-hole pair extraction efficienc
+Ti = 298 #inside temperature
+To = 311 #outside temperature
+Ui = 8.3 #overall heat transfer coefficient of layers inside active layer
+Uo = 17 #same for outside
+Rs = 0 #series resistence
+Rsh = 1e5 #shunt resistence
+AbsorberLayer = 3 #which layer is PV absorber layer
+
+
+stuff = wpv.get_performance_characteristics(stack,eta,Ti,To,Ui,Uo,Rs,Rsh,AbsorberLayer,iang)
+
+print(stuff)
+
+
