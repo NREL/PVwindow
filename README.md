@@ -89,6 +89,7 @@ plt.ylabel(r"R, A, or T")
 plt.legend(loc='upper right')
 plt.show()
 ```
+![./github_fig1.png]
 Further, the user can calculate numerous interesting quantities with a single function call after defining a number of parameters defining the PV absorber type and the environment surrounding the window.
 ```
 eta = 1 #electron-hole pair extraction efficienc
@@ -105,6 +106,9 @@ stuff = wpv.get_performance_characteristics(stack,eta,Ti,To,Ui,Uo,Rs,Rsh,Absorbe
 print(stuff)
 ```
 The result is
+```
+{'PCE': 0.09831888116259804, 'VLT': 0.4014881243639931, 'SHGC': 0.4268310451847299, 'Tcell': 320.166030217463, 'Isc': 82.0346352987794, 'Voc': 1.3234487008303404, 'Imp': 79.77235055919417, 'Vmp': 1.224380125768254, 'Pmp': 97.6716806104954}
+```
 
 [^1]: https://pubs.acs.org/doi/full/10.1021/acsenergylett.9b01316
 [^2]: Code available here: https://github.com/sbyrnes321/tmm. Theory described here: https://arxiv.org/abs/1603.02720
