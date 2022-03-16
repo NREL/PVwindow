@@ -5,18 +5,15 @@ from numpy import array, linspace, exp, pi, inf, vstack
 import matplotlib.pyplot as plt
 import pandas as pd
 import tmm
-import vegas
 
 from matplotlib.pyplot import plot,figure,xlabel,ylabel,show,ylim,legend
 from scipy.optimize import fsolve
-from scipy.integrate import quad
-from pandas import read_excel
+from scipy.integrate import quad,trapz
 import sys
 assert sys.version_info >= (3,6), 'Requires Python 3.6+'
 from pvlib.pvsystem import singlediode
 #import tmmPVColor as pvc
-import CalculateVLTFromSpectrum as cvs
-from colorpy import plots, ciexyz, colormodels #need to install colorpy to call all packages at once
+#from colorpy import plots, ciexyz, colormodels #need to install colorpy to call all packages at once
 
 
 
@@ -146,7 +143,7 @@ class Stack:
         plt.show()
         '''
             
-    
+    '''
     def get_solar_weighted_absorption(self,lamrange,inc_angle):
                 
         
@@ -158,8 +155,9 @@ class Stack:
         #print(type(Asol.mean))
         
         return Asol.mean
+   
     
-    def get_visible_light_transmission(self,lamrange,inc_angle):
+    def get_visible_light_transmission_OLD(self,lamrange,inc_angle):
         
         integ = vegas.Integrator([lamrange])
         
@@ -170,29 +168,48 @@ class Stack:
         #print(type(Asol.mean))
         
         return VLT.mean
+    '''
+   
+    def get_visible_light_transmission(self,lams,inc_angle):
         
+        
+        numerator = trapz(self.Is(lams)*self.cieplf(lams)*self.get_specular_RAT(lams,inc_angle)[2],lams)
+        denominator = trapz(self.Is(lams)*self.cieplf(lams),lams)
+        VLT = numerator/denominator
+        
+        #print(type(Asol.mean))
+        
+        return VLT
         
     
-    def get_RAT(self,lam,inc_angle):
+    def get_specular_RAT(self,lams,inc_angle):
         
-        thicks = [tmm.inf]
-        iorcs = ['i']
-        nks = [1]
-        for layer in self.layers:
-            nks.append(layer.nk(lam))
-            thicks.append(layer.d)
-            iorcs.append(layer.i_or_c)
-        thicks.append(tmm.inf)
-        iorcs.append('i')
-        nks.append(1)
+        Ts = []
+        Rs = []
+        for lam in lams:
+            thicks = [tmm.inf]
+            iorcs = ['i']
+            nks = [1]
+            for layer in self.layers:
+                nks.append(layer.nk(lam))
+                thicks.append(layer.d)
+                iorcs.append(layer.i_or_c)
+            thicks.append(tmm.inf)
+            iorcs.append('i')
+            nks.append(1)
+
+            front_spol = tmm.inc_tmm('s',nks,thicks,iorcs,inc_angle,lam)
+            front_ppol = tmm.inc_tmm('p',nks,thicks,iorcs,inc_angle,lam)
+
+            R = (front_spol['R']+front_ppol['R']) / 2.
+            Rs.append(R)
+            T = (front_spol['T']+front_ppol['T']) / 2. 
+            Ts.append(T)
         
-        front_spol = tmm.inc_tmm('s',nks,thicks,iorcs,inc_angle,lam)
-        front_ppol = tmm.inc_tmm('p',nks,thicks,iorcs,inc_angle,lam)
-        
-        R = (front_spol['R']+front_ppol['R']) / 2.
-        T = (front_spol['T']+front_ppol['T']) / 2. 
-        
-        return [R,1-R-T,T]
+        Rs = np.array(Rs)
+        Ts = np.array(Ts)
+        As = 1.-Rs-Ts
+        return [Rs,As,Ts]
         
     def reverse(self):
         
@@ -336,9 +353,7 @@ def GiveSingleColorSwatch(spectrum, wavelength, name):
 # ******************** Here I add PCE calculation *********************#
             
 '''This stuff imports a spreadsheet of the solar spectrum'''
-#worksheet = pandas.read_excel('https://www.nrel.gov/grid/solar-resource/assets/data/astmg173.xls')
-worksheet = read_excel('./Data/ASTMG173.xls')#('https://www.nrel.gov/grid/solar-resource/assets/data/astmg173.xls')
-#worksheet = pandas.read_excel('/Users/lwheeler/Code/pv-window-bem/Data/astmg173.xls')
+worksheet = pd.read_excel('./Data/ASTMG173.xls')#('https://www.nrel.gov/grid/solar-resource/assets/data/astmg173.xls')
 downloaded_array = array(worksheet)
 
 # Wavelength is in column 0, AM1.5G data is column 2
@@ -593,7 +608,6 @@ def GiveImportantInfo(Thickness, Materials,eta,Ti,To,Ui,Uo,Rs,Rsh,AbsorberLayer,
 # Vince hacks some stuff from Adam
 
 def get_performance_characteristics(stack,eta,Ti,To,Ui,Uo,Rs,Rsh,AbsorberLayer,Angle):
-
     
     layers = stack.layers
     
@@ -605,7 +619,7 @@ def get_performance_characteristics(stack,eta,Ti,To,Ui,Uo,Rs,Rsh,AbsorberLayer,A
     As = spectra['As']
     sanities = spectra['Total']
     Absorbed = GiveEInterp(AbsByAbsorbers)
-    VLTcalc =  cvs.getVLT(Ts,lams)#VLT(layers)
+    VLTcalc =  stack.get_visible_light_transmission(lams,Angle) #cvs.getVLT(Ts,lams)#VLT(layers)
     Tcell = TcellCalc(As,eta, Ti,To, Absorbed, Ui, Uo, Rs, Rsh)
     #Absorbed = tpc.GiveEInterp(tpc.Spectra(tpc.GiveLayers(Thickness, Materials),4)['AbsByAbsorbers'])
     data = GiveIVData(eta, Absorbed, Rs, Rsh,Tcell, n = 1, Ns = 1)
@@ -617,36 +631,6 @@ def get_performance_characteristics(stack,eta,Ti,To,Ui,Uo,Rs,Rsh,AbsorberLayer,A
     SHGCcalc = SHGC(Ts, Ti, To, Tcell, Ui)
     PCE = max_efficiency(eta,Absorbed,Tcell, Rs, Rsh)
 
-    '''
-    #Spectral Curves
-    figure()
-    plot(lams,Rfs,color='magenta',marker=None,label="$R_f$")
-    plot(lams,Ts,color='green',marker=None,label="$T$")
-    plot(lams,Rbs,color='purple',marker=None,label="$R_b$")
-    plot(lams,As,color='black',marker=None,label="A")
-    plot(lams,AbsByAbsorbers,color='black',linestyle='--',marker=None,label="AbsByAbsorber")
-    plot(lams,sanities,color='gold',marker=None,label="R+A+T")
-    plot(lams,VLTSpectrum(layers).cieplf(lams),color='red',marker=None,label="photopic")
-    xlabel('wavelength, $\mu$m')
-    ylabel('Intensity')
-    legend(loc = 'upper right')
-    show()
-    
-    EphotoneV = Ephoton*6.241509e+18 
-    figure()
-    plot(EphotoneV, Ts, color='magenta',marker=None,label="$T$")
-    plot(EphotoneV, Rfs,color='green',marker=None,label="$R_f$")
-    plot(EphotoneV, Rbs,color='orange',marker=None,label="$R_b$")
-    plot(EphotoneV, AbsByAbsorbers,color='black',marker=None,label="Abs")
-    #plot(Ephoton,tpc.VLTSpectrum(layers).cieplf(lams),color='red',marker=None,label="photopic")
-    legend(loc = 'upper right')
-    xlabel('Energy, eV')
-    ylabel('Intensity')
-    show()
-
-    GiveColorSwatch(Ts, Rfs)
-    plot_xy_on_fin(Ts, Rfs)
-    '''
     #print('PCE = ',PCE,'VLT = ', VLTcalc, 'SHGC = ',SHGCcalc, 'Tcell = ',Tcell)#,'time to calculate PCE from scratch in seconds = ', TimePCE, 'Time to run optimizer in minutes = ',TimeOptimize/60)
     return {'PCE':PCE, 'VLT':VLTcalc, 'SHGC':SHGCcalc, 'Tcell':Tcell,'Isc':Isc, 'Voc': Voc, 'Imp': Imp, 'Vmp': Vmp,'Pmp': Pmp}
 

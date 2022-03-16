@@ -32,17 +32,7 @@ Ts = []
 
 iang = 0.
 
-for lam in lams:
-
-    [Rf,A,T] = stack.get_RAT(lam,iang)
-    Rfs.append(Rf)
-    As.append(A)
-    Ts.append(T)
-
-
-Rfs = np.array(Rfs)
-As = np.array(As)
-Ts = np.array(Ts)
+[Rfs,As,Ts] = stack.get_specular_RAT(lams,iang)
 
 plt.figure()
 plt.plot(lams,Rfs,label=r"$R$")
