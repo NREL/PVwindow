@@ -1,14 +1,13 @@
 import csv
-from scipy.interpolate import interp1d
 import numpy as np
 from numpy import array, linspace, exp, pi, inf, vstack
-import matplotlib.pyplot as plt
-import pandas as pd
-import tmm
-
-from matplotlib.pyplot import plot,figure,xlabel,ylabel,show,ylim,legend
+from scipy.interpolate import interp1d
 from scipy.optimize import fsolve
 from scipy.integrate import quad,trapz
+import pandas as pd
+import tmm
+import matplotlib.pyplot as plt
+from matplotlib.pyplot import plot,figure,xlabel,ylabel,show,ylim,legend
 import sys
 assert sys.version_info >= (3,6), 'Requires Python 3.6+'
 from pvlib.pvsystem import singlediode
@@ -32,23 +31,37 @@ class Layer:
     I am a layer class for organizing data for each layer. I should make constructing stacks easier in the future and reduce possible mistakes
     """
     
-    def __init__(self, thickness, fname_root, i_or_c,**kwargs):
-        self.d = thickness
+    def __init__(self, thickness, fname_root, i_or_c='c', isPV=False, **kwargs):
+        
+        if thickness:
+            self.d = thickness
+        else:
+            self.d = None
+        
         self.i_or_c = i_or_c
         #self.nk = 1.0
-        self.datasource = fname_root
         
-        if kwargs.get('onecol'):
-            print('dumb data')
-            self.get_dumb_data()
+        if fname_root:
+            self.datasource = fname_root
+            if kwargs.get('onecol'):
+                print('dumb data')
+                self.get_dumb_data()
+            else:
+                self.get_sensible_data()
         else:
-            self.get_sensible_data()
+            self.datasource = None
+        
+        
+        self.isPV = isPV
+        self.abs = 0
+        
+        
         
     
     
     def get_dumb_data(self):
         
-        matfilename = 'Data/' + self.datasource + '.csv'
+        matfilename = 'Data/Materials/' + self.datasource + '.csv'
         lct = 0
         bothdat = []
         with open(matfilename, newline='') as csvfile:
@@ -89,10 +102,10 @@ class Layer:
         
     def get_sensible_data(self):
         """
-                next we will unpack n and k data from a csv file and turn it into a callable interpolation function
+        next we will unpack n and k data from a csv file and turn it into a callable interpolation function
         """
         
-        matfilename = 'Data/' + self.datasource + '.csv'
+        matfilename = 'Data/Materials/' + self.datasource# + '.csv'
         testdat = np.genfromtxt(matfilename,delimiter=',',skip_header=1)
         
         nlams = testdat[:,0]
@@ -114,6 +127,11 @@ class Layer:
         plt.title(self.datasource)
         plt.legend()
         plt.show()
+        
+    def self_summary(self):
+        
+        print('    Material: ' + str(self.datasource) )
+        print('    Thickness: ' + str(self.d) )
                  
   
 class Stack:
@@ -126,50 +144,17 @@ class Stack:
         self.layers = layers
 
         #import data from NIST solar spectrum
-        alldata = pd.read_excel('./Data/ASTMG173.xls',header=1)
+        alldata = pd.read_excel('./Data/Spectra/ASTMG173.xls',header=1)
 
         Intensities = np.array(alldata['Direct+circumsolar W*m-2*nm-1'])
         wavelengths = np.array(alldata['Wvlgth nm'].values)
         
         self.Is = interp1d(wavelengths/1000.,Intensities*1000)
 
-        ciedata = pd.read_csv('./Data/CIEPhotopicLuminosity.csv',names=['lams','phis'])
+        ciedata = pd.read_csv('./Data/Spectra/CIEPhotopicLuminosity.csv',names=['lams','phis'])
 
         self.cieplf = interp1d(np.array(ciedata['lams'])/1000.,np.array(ciedata['phis']),bounds_error=False,fill_value=(0.0,0.0))
-        
-        '''
-        plt.figure()
-        plt.plot(wavelengths/1000,self.cieplf(wavelengths/1000))
-        plt.show()
-        '''
-            
-    '''
-    def get_solar_weighted_absorption(self,lamrange,inc_angle):
-                
-        
-        integ = vegas.Integrator([lamrange])
-        
-        Asol = integ(lambda lam: self.Is(lam)*self.get_RAT(lam,inc_angle)[1], nitn=10, neval=100)[0]
-        Asol /= integ(self.Is, nitn=10, neval=1000)[0]
-        
-        #print(type(Asol.mean))
-        
-        return Asol.mean
-   
-    
-    def get_visible_light_transmission_OLD(self,lamrange,inc_angle):
-        
-        integ = vegas.Integrator([lamrange])
-        
-        numerator = integ(lambda lam: self.Is(lam)*self.cieplf(lam)*self.get_RAT(lam,inc_angle)[2], nitn=10, neval=150)[0]
-        denominator = integ(lambda lam: self.Is(lam)*self.cieplf(lam), nitn=10, neval=150)[0]
-        VLT = numerator/denominator
-        
-        #print(type(Asol.mean))
-        
-        return VLT.mean
-    '''
-   
+
     def get_visible_light_transmission(self,lams,inc_angle):
         
         
@@ -216,7 +201,128 @@ class Stack:
         flippedstack = Stack(self.layers[::-1])
         return flippedstack
     
+    
+    def get_specular_PV_abs(self, lams, inc_angle):
+        
+        '''
+        note from Byrnes:     
+        Assumes the final layer eventually absorbs all transmitted light.
+        Assumes the initial layer eventually absorbs all reflected light.
+        '''
+        
+        
+        thicks = [inf]
+        iorcs = ['i']
+        lnum = 0
+        pvlayer = 0
+        for layer in self.layers:
+            thicks.append(layer.d)
+            iorcs.append(layer.i_or_c)
+            if layer.isPV:
+                pvlayer = lnum
+            lnum += 1
+                
+        thicks.append(inf)
+        iorcs.append('i')
 
+
+        thicks_bw = thicks[::-1]
+        iorcs_bw = iorcs[::-1]
+        
+        pvabs = []
+        
+        for lam in lams:
+
+            nks = [1]
+            for layer in self.layers:
+                nks.append(layer.nk(lam))
+            nks.append(1)
+
+            front_spol = tmm.inc_tmm('s',nks,thicks,iorcs,inc_angle,lam)
+            front_ppol = tmm.inc_tmm('p',nks,thicks,iorcs,inc_angle,lam)
+
+            pvabs_s = tmm.inc_absorp_in_each_layer(front_spol)[pvlayer]
+            pvabs_p = tmm.inc_absorp_in_each_layer(front_ppol)[pvlayer]
+
+
+            pvabs.append( (pvabs_s + pvabs_p) / 2. )
+
+            
+        #print(allabs)
+            
+        return pvabs 
+    
+    
+    def update_from_dash(self,dashdata):
+        
+        ct = 0
+        layers = []
+        for entry in dashdata:
+            
+            if entry['Thickness [μm]']:
+            
+                if float(entry['Thickness [μm]'])>100:
+                    ic = 'i'
+                else:
+                    ic = 'c'
+            
+            layer = Layer(entry['Thickness [μm]'], 
+                          entry['Material'], 
+                          i_or_c=ic, 
+                          isPV=entry['PV'])
+            layers.append(layer)
+            
+        self.layers = layers
+       
+        return False
+    
+    
+    def self_summary(self):
+        
+        print('=======================================')
+        print('I am a stack with the following layers:')
+        print('=======================================')
+
+        ct = 0
+        for layer in self.layers:
+            ct+=1
+            print('  Layer ' + str(ct))
+            layer.self_summary()
+            print('')
+    
+        '''
+        plt.figure()
+        plt.plot(wavelengths/1000,self.cieplf(wavelengths/1000))
+        plt.show()
+        '''
+            
+    '''
+    def get_solar_weighted_absorption(self,lamrange,inc_angle):
+                
+        
+        integ = vegas.Integrator([lamrange])
+        
+        Asol = integ(lambda lam: self.Is(lam)*self.get_RAT(lam,inc_angle)[1], nitn=10, neval=100)[0]
+        Asol /= integ(self.Is, nitn=10, neval=1000)[0]
+        
+        #print(type(Asol.mean))
+        
+        return Asol.mean
+   
+    
+    def get_visible_light_transmission_OLD(self,lamrange,inc_angle):
+        
+        integ = vegas.Integrator([lamrange])
+        
+        numerator = integ(lambda lam: self.Is(lam)*self.cieplf(lam)*self.get_RAT(lam,inc_angle)[2], nitn=10, neval=150)[0]
+        denominator = integ(lambda lam: self.Is(lam)*self.cieplf(lam), nitn=10, neval=150)[0]
+        VLT = numerator/denominator
+        
+        #print(type(Asol.mean))
+        
+        return VLT.mean
+    '''
+   
 
 # STUFF FROM ADAM
 
@@ -353,7 +459,7 @@ def GiveSingleColorSwatch(spectrum, wavelength, name):
 # ******************** Here I add PCE calculation *********************#
             
 '''This stuff imports a spreadsheet of the solar spectrum'''
-worksheet = pd.read_excel('./Data/ASTMG173.xls')#('https://www.nrel.gov/grid/solar-resource/assets/data/astmg173.xls')
+worksheet = pd.read_excel('./Data/Spectra/ASTMG173.xls')#('https://www.nrel.gov/grid/solar-resource/assets/data/astmg173.xls')
 downloaded_array = array(worksheet)
 
 # Wavelength is in column 0, AM1.5G data is column 2

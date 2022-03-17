@@ -6,15 +6,16 @@ Author: vmwheeler
 import numpy as np
 import wpv
 import matplotlib.pyplot as plt
+import pandas as pd
 
 
 
-Glass = wpv.Layer(4000,'nkLowFeGlass','i')
-FTO = wpv.Layer(0.3,'nkFTO','c')
-MAPI = wpv.Layer(0.06,'nkMAPI','c')
-Ag = wpv.Layer(0.01,'nkAg','c')
-TiO2lowE = wpv.Layer(0.02,'nkTiO2','c')
-EVA = wpv.Layer(1500,'nkEVA','i')
+Glass = wpv.Layer(4000,'nkLowFeGlass.csv','i')
+FTO = wpv.Layer(0.3,'nkFTO.csv','c')
+MAPI = wpv.Layer(0.06,'nkMAPI.csv','c',isPV=True)
+Ag = wpv.Layer(0.01,'nkAg.csv','c')
+TiO2lowE = wpv.Layer(0.02,'nkTiO2.csv','c')
+EVA = wpv.Layer(1500,'nkEVA.csv','i')
 
 
 layers = [Glass,FTO,MAPI,EVA,Glass,TiO2lowE,Ag,TiO2lowE]
@@ -32,12 +33,15 @@ Ts = []
 
 iang = 0.
 
+pvabs = stack.get_specular_PV_abs(lams, iang)
+
 [Rfs,As,Ts] = stack.get_specular_RAT(lams,iang)
 
 plt.figure()
 plt.plot(lams,Rfs,label=r"$R$")
 plt.plot(lams,As,label=r"$A$")
 plt.plot(lams,Ts,label=r"$T$")
+plt.plot(lams,pvabs,label=r"$A_{PV}$")
 plt.plot(lams,Rfs+As+Ts,label=r"$R+A+T$")
 plt.xlabel(r"$\lambda$, micron")
 plt.ylabel(r"R, A, or T")
@@ -54,8 +58,8 @@ Rsh = 1e5 #shunt resistence
 AbsorberLayer = 3 #which layer is PV absorber layer
 
 
-stuff = wpv.get_performance_characteristics(stack,eta,Ti,To,Ui,Uo,Rs,Rsh,AbsorberLayer,iang)
+#stuff = wpv.get_performance_characteristics(stack,eta,Ti,To,Ui,Uo,Rs,Rsh,AbsorberLayer,iang)
 
-print(stuff)
+#print(stuff)
 
 
