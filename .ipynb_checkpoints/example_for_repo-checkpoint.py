@@ -12,13 +12,15 @@ import pandas as pd
 
 Glass = wpv.Layer(4000,'nkLowFeGlass.csv','i')
 FTO = wpv.Layer(0.3,'nkFTO.csv','c')
-MAPI = wpv.Layer(0.06,'nkMAPI.csv','c',isPV=True)
+MAPI = wpv.Layer(0.6,'nkMAPI.csv','c',isPV=True)
 Ag = wpv.Layer(0.01,'nkAg.csv','c')
 TiO2lowE = wpv.Layer(0.02,'nkTiO2.csv','c')
 EVA = wpv.Layer(1500,'nkEVA.csv','i')
 
 
-layers = [Glass,FTO,MAPI,EVA,Glass,TiO2lowE,Ag,TiO2lowE]
+#layers = [Glass,FTO,MAPI,EVA,Glass,TiO2lowE,Ag,TiO2lowE]
+#layers = [Glass,FTO,EVA,Glass,TiO2lowE,Ag,TiO2lowE]
+layers = [Glass,FTO,MAPI]
 
 stack = wpv.Stack(layers)
 

@@ -132,6 +132,7 @@ class Layer:
         
         print('    Material: ' + str(self.datasource) )
         print('    Thickness: ' + str(self.d) )
+        print('    PV?: ' + str(self.isPV))
                  
   
 class Stack:
@@ -215,13 +216,24 @@ class Stack:
         iorcs = ['i']
         lnum = 0
         pvlayer = 0
+        
+        pvs = []
         for layer in self.layers:
             thicks.append(layer.d)
             iorcs.append(layer.i_or_c)
+            pvs.append(layer.isPV)
             if layer.isPV:
                 pvlayer = lnum
             lnum += 1
-                
+        
+        print('pvlayer: ' + str(pvlayer))
+        print('lnum: ' +str(lnum)) 
+        print(any(pvs))
+        print(np.invert(any(pvs)))
+        if np.invert(any(pvs)):
+            print('no PV')
+            return np.zeros(np.shape(lams))
+        
         thicks.append(inf)
         iorcs.append('i')
 
@@ -238,11 +250,12 @@ class Stack:
                 nks.append(layer.nk(lam))
             nks.append(1)
 
+            #note the plus one because of the assumed before and after layers
             front_spol = tmm.inc_tmm('s',nks,thicks,iorcs,inc_angle,lam)
             front_ppol = tmm.inc_tmm('p',nks,thicks,iorcs,inc_angle,lam)
 
-            pvabs_s = tmm.inc_absorp_in_each_layer(front_spol)[pvlayer]
-            pvabs_p = tmm.inc_absorp_in_each_layer(front_ppol)[pvlayer]
+            pvabs_s = tmm.inc_absorp_in_each_layer(front_spol)[pvlayer+1]
+            pvabs_p = tmm.inc_absorp_in_each_layer(front_ppol)[pvlayer+1]
 
 
             pvabs.append( (pvabs_s + pvabs_p) / 2. )
