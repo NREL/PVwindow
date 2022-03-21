@@ -223,7 +223,7 @@ class Stack:
             iorcs.append(layer.i_or_c)
             pvs.append(layer.isPV)
             if layer.isPV:
-                pvlayer = lnum
+                pvlayer = lnum+1 #+1 because of how tmm is written: always a layer above and below stack
             lnum += 1
         
         print('pvlayer: ' + str(pvlayer))
@@ -254,8 +254,8 @@ class Stack:
             front_spol = tmm.inc_tmm('s',nks,thicks,iorcs,inc_angle,lam)
             front_ppol = tmm.inc_tmm('p',nks,thicks,iorcs,inc_angle,lam)
 
-            pvabs_s = tmm.inc_absorp_in_each_layer(front_spol)[pvlayer+1]
-            pvabs_p = tmm.inc_absorp_in_each_layer(front_ppol)[pvlayer+1]
+            pvabs_s = tmm.inc_absorp_in_each_layer(front_spol)[pvlayer]
+            pvabs_p = tmm.inc_absorp_in_each_layer(front_ppol)[pvlayer]
 
 
             pvabs.append( (pvabs_s + pvabs_p) / 2. )
