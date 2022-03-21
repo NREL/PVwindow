@@ -122,5 +122,9 @@ plot_multi_colour_swatches(
     [ColourSwatch(sRGB,'sRGB'),ColourSwatch(RGB_chrom,'chromatricity'),ColourSwatch(RGB_badchrom,'~chromatricity')],
     text_kwargs={'size': 'x-large'})
 
+
+hidden = stack.get_transmitted_color(lams,iang)
+
+print(hidden)
 #hexcol = convert(sd,'Spectral Distribution','Hexadecimal')
 #print(hexcol)

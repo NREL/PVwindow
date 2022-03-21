@@ -11,6 +11,10 @@ from matplotlib.pyplot import plot,figure,xlabel,ylabel,show,ylim,legend
 import sys
 assert sys.version_info >= (3,6), 'Requires Python 3.6+'
 from pvlib.pvsystem import singlediode
+from colour import SpectralDistribution, XYZ_to_sRGB, cctf_decoding, cctf_encoding
+from colour.colorimetry import sd_to_XYZ_integration
+from colour.notation import RGB_to_HEX
+from colour.plotting import ColourSwatch, plot_multi_colour_swatches
 
 #import tmmPVColor as pvc
 
@@ -264,6 +268,57 @@ class Stack:
         #print(allabs)
             
         return pvabs 
+    
+    
+    def get_transmitted_color(self,lams,inc_angle):
+        
+        [Rs,As,Ts] = self.get_specular_RAT(lams,inc_angle)
+        
+        nmlams = lams*1000
+        
+        # get spectral distribution
+        df_spec = pd.Series(data=Ts,index=nmlams)
+        sd_spec = SpectralDistribution(df_spec)
+
+        # get distribution of illuminant (sun!)
+        df_ill = pd.Series(data=self.Is(lams),index=nmlams)
+        sd_ill = SpectralDistribution(df_ill)
+
+        # integrate spectrum to get CIE XYZ
+        XYZ = sd_to_XYZ_integration(sd_spec,illuminant=sd_ill)
+        
+        # get sRGB from XYZ (note: not RGB, see https://en.wikipedia.org/wiki/SRGB)
+        #https://colour.readthedocs.io/en/develop/tutorial.html?highlight=colourswatch#convert-to-display-colours
+        #see above for why 100 is below
+        sRGB = XYZ_to_sRGB(XYZ/100.)
+
+        # remove gamma transfer function to get chromatricity by scaling
+        # see https://en.wikipedia.org/wiki/SRGB#The_forward_transformation_.28CIE_xyY_or_CIE_XYZ_to_sRGB.29
+        RGB_degamma = cctf_decoding(np.clip(sRGB,0,1),'GAMMA 2.2')
+
+        # scale the untransformed RGB to get chromatricity
+        RGB_scale = RGB_degamma/np.max(RGB_degamma)
+        # get the chromatricity for display by getting re-transforming
+        RGB_chrom = cctf_encoding(RGB_scale,'GAMMA 2.2')
+
+        #remove possible negative RGB values
+        sRGB = np.clip(sRGB,0,1)
+
+        # check scaling without tranforming could lead to a chromatricity change
+        # check if this happens
+        RGB_badchrom = sRGB/np.max(sRGB)
+
+        HEX_color = RGB_to_HEX(sRGB)
+
+        HEX_chrom = RGB_to_HEX(RGB_chrom)
+        '''
+        plot_multi_colour_swatches( [ColourSwatch(sRGB,'sRGB'),
+                                     ColourSwatch(RGB_chrom,'chromatricity'),
+                                     ColourSwatch(RGB_badchrom,'~chromatricity')],
+            text_kwargs={'size': 'x-large'})
+        '''
+        return {'color':HEX_color,'chromaticity':HEX_chrom}
+        
     
     
     def update_from_dash(self,dashdata):
