@@ -536,7 +536,7 @@ def GiveSingleColorSwatch(spectrum, wavelength, name):
 # ******************** Here I add PCE calculation *********************#
             
 '''This stuff imports a spreadsheet of the solar spectrum'''
-worksheet = pd.read_excel('./Data/Spectra/ASTMG173.xls')#('https://www.nrel.gov/grid/solar-resource/assets/data/astmg173.xls')
+worksheet = pd.read_excel(pathtodat + '/Data/Spectra/ASTMG173.xls')#('https://www.nrel.gov/grid/solar-resource/assets/data/astmg173.xls')
 downloaded_array = array(worksheet)
 
 # Wavelength is in column 0, AM1.5G data is column 2
