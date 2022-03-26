@@ -13,6 +13,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import wpv
 import os
+import time
 #import plotly.express as px
 
 
@@ -71,6 +72,7 @@ i_ang = 0
 Is = stack.Is(lambdas)/np.max(stack.Is(lambdas))
 LEF = stack.cieplf(lambdas)
 
+centeredstyle={'width':'10%','background-color':'red','position': 'absolute','top':'50%','-ms-transform':'translateY(-50%)','transform':'translateY(-50%)'}
 
 app.layout = dbc.Container([
     dcc.Store(id="store"),
@@ -89,17 +91,47 @@ app.layout = dbc.Container([
         [
              #html.H1('I am hungry'),
              html.H6('Device Stack',className='display-6'),#,class_name="me-md-1"
-             html.Span('Layer:',style={'display':'inline-block','font-size':'22px','width':'20%','height':'36px',"verticalAlign": "center",'text-align':'center','float':'left'}),
-                 dbc.Button('+',color="primary",id='button_add',style={'width':'10%','height':'36px','float':'left'},n_clicks=0),
-             dbc.ButtonGroup([
-                 dbc.Button('↑',outline=True,color="primary",id='button_up',n_clicks=0),
-                 dbc.Button('↓',outline=True,color="primary",id='button_down',n_clicks=0),
+             
+             #button row
+             html.Div([
+                 html.Span('Layer:',
+                           style={'display':'inline-block',
+                                  'font-size':'22px','width':'20%',
+                                  'height':'36px',"verticalAlign": "center",
+                                  'text-align':'center','float':'left'}),
+                 dbc.Button('+',
+                            color="primary",
+                            id='button_add',
+                            style={'width':'10%','height':'36px','float':'left'},
+                            n_clicks=0),
+                 dbc.ButtonGroup([
+                     dbc.Button('↑',
+                                outline=True,color="primary",
+                                id='button_up',n_clicks=0),
+                     dbc.Button('↓',
+                                outline=True,color="primary",
+                                id='button_down',n_clicks=0),
+                     ],
+                 style={'width':'20%','height':'36px','float':'left'}
+                 ),
+
+                 html.Div(style={'width':'5%','height':'36px','float':'left'}),
+                 
+                 dbc.Button('Solve',
+                        id='button_solve',
+                        style={'width':'20%','height':'36px','float':'left'},
+                        color='secondary',n_clicks=0,className='me-1'),#style={'width':'60%'},class_name='d-grid col-4 mx-auto'
+                 dbc.Button(
+                     dbc.Spinner(html.Div(id='waiting-for-stuff'),color='primary'),
+                     color='transparent',
+                     #disabled=True,
+                     style={'float':'left','width':'11%','height':'36px'},
+                     className='me-0'
+                 )
              ],
-             style={'width':'20%','height':'36px','float':'left'}
+                 style={'position':'relative','float':'left','width':'100%'}
              ),
-             #html.Br(),
-             html.Div(style={'width':'5%','height':'36px','float':'left'}),
-             dbc.Button('Solve',id='button_solve',style={'width':'20%','height':'36px'},color='secondary',n_clicks=0),#style={'width':'60%'},class_name='d-grid col-4 mx-auto'
+
              html.Br(),
              dash_table.DataTable(
                  columns = [{'name':'Material','id':'Material','presentation': 'dropdown'},
@@ -151,8 +183,13 @@ app.layout = dbc.Container([
             ),
             html.Div(id="tab-content",className="p-4"),
         ],
-        style = {'float':'left','width':'50%'},
+        style = {'float':'left','width':'50%','position':'relative'},
     ),
+#    html.Div(
+#        [
+#            html.Div('first',style=centeredstyle)
+#        ],
+#        style={'height':'36px','width':'50%','float':'left','background-#color':'yellow','position':'relative'})
     ],
     #fluid=True,
 )
@@ -262,10 +299,13 @@ Now adding outputs for analysis tab: color, chromaticity, PCE, SHGC...
 
 @app.callback(
     Output('store','data'),
+    Output('waiting-for-stuff','children'),
     Input('button_solve','n_clicks'),
     State('layer_table', 'data'),
 )
 def make_figures(n_clicks,data_from_table):
+    
+    time.sleep(1)
     
     fig = go.Figure()
     
@@ -356,7 +396,7 @@ def make_figures(n_clicks,data_from_table):
     colorstuff = stack.get_transmitted_color(lambdas,i_ang)
     #print(colorstuff)
         
-    return {'rat-fig':fig,'metric-stuff':colorstuff}
+    return {'rat-fig':fig,'metric-stuff':colorstuff},None
 
 
 if __name__ == '__main__':
