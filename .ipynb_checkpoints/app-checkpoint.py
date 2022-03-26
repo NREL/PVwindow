@@ -12,11 +12,12 @@ import dash_bootstrap_components as dbc
 import pandas as pd
 import plotly.graph_objects as go
 import wpv
+import os
 #import plotly.express as px
 
-#print([{"name": i, "id": i} for i in df.columns])
 
-#JupyterDash.infer_jupyter_proxy_config()
+
+
 
 matmap = {'Low Fe Glass':'nkLowFeGlass.csv',
           'FTO':'nkFTO.csv',
@@ -86,7 +87,7 @@ app.layout = dbc.Container([
     # left side of interface  
     dbc.Container(
         [
-             #html.H1('I live'),
+             #html.H1('I am hungry'),
              html.H6('Device Stack',className='display-6'),#,class_name="me-md-1"
              html.Span('Layer:',style={'display':'inline-block','font-size':'22px','width':'20%','height':'36px',"verticalAlign": "center",'text-align':'center','float':'left'}),
                  dbc.Button('+',color="primary",id='button_add',style={'width':'10%','height':'36px','float':'left'},n_clicks=0),

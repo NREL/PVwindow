@@ -15,6 +15,7 @@ from colour import SpectralDistribution, XYZ_to_sRGB, cctf_decoding, cctf_encodi
 from colour.colorimetry import sd_to_XYZ_integration
 from colour.notation import RGB_to_HEX
 from colour.plotting import ColourSwatch, plot_multi_colour_swatches
+import os
 
 #import tmmPVColor as pvc
 
@@ -29,6 +30,13 @@ q = 1.602176634e-19 #coulombs. elementary charge
 c0 = 299792458 #m/s #Speed of light
 hPlanck = 6.62607015e-34 #J*s   4.135667516e-15 #eV*s               
 kB = 1.380649e-23 #J/K    8.61733034e-5 #eV/K  
+
+#pathtodat = os.path.abspath(__file__).replace(__file__,'')
+pathtodat = os.path.abspath(__file__).replace('/wpv.py','')
+#print('path to data: ')
+#print(__file__)
+#print(pathtodat)
+#print('printed')
 
 class Layer:
     """ 
@@ -109,7 +117,8 @@ class Layer:
         next we will unpack n and k data from a csv file and turn it into a callable interpolation function
         """
         
-        matfilename = './Data/Materials/' + self.datasource# + '.csv'
+        matfilename = pathtodat + '/Data/Materials/' + self.datasource# + '.csv'
+        #matfilename = './Data/Materials/' + self.datasource# + '.csv'
         testdat = np.genfromtxt(matfilename,delimiter=',',skip_header=1)
         
         nlams = testdat[:,0]
