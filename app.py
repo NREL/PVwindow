@@ -13,7 +13,6 @@ import pandas as pd
 import plotly.graph_objects as go
 import wpv
 import os
-import time
 #import plotly.express as px
 
 
@@ -304,9 +303,7 @@ Now adding outputs for analysis tab: color, chromaticity, PCE, SHGC...
     State('layer_table', 'data'),
 )
 def make_figures(n_clicks,data_from_table):
-    
-    time.sleep(1)
-    
+        
     fig = go.Figure()
     
     fig.add_trace(
