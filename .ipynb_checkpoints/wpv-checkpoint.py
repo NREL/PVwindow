@@ -158,14 +158,14 @@ class Stack:
         self.layers = layers
 
         #import data from NIST solar spectrum
-        alldata = pd.read_excel('./Data/Spectra/ASTMG173.xls',header=1)
+        alldata = pd.read_excel(pathtodat + '/Data/Spectra/ASTMG173.xls',header=1)
 
         Intensities = np.array(alldata['Direct+circumsolar W*m-2*nm-1'])
         wavelengths = np.array(alldata['Wvlgth nm'].values)
         
         self.Is = interp1d(wavelengths/1000.,Intensities*1000)
 
-        ciedata = pd.read_csv('./Data/Spectra/CIEPhotopicLuminosity.csv',names=['lams','phis'])
+        ciedata = pd.read_csv(pathtodat + '/Data/Spectra/CIEPhotopicLuminosity.csv',names=['lams','phis'])
 
         self.cieplf = interp1d(np.array(ciedata['lams'])/1000.,np.array(ciedata['phis']),bounds_error=False,fill_value=(0.0,0.0))
 
