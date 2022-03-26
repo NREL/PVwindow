@@ -109,7 +109,7 @@ class Layer:
         next we will unpack n and k data from a csv file and turn it into a callable interpolation function
         """
         
-        matfilename = 'Data/Materials/' + self.datasource# + '.csv'
+        matfilename = './Data/Materials/' + self.datasource# + '.csv'
         testdat = np.genfromtxt(matfilename,delimiter=',',skip_header=1)
         
         nlams = testdat[:,0]
@@ -230,12 +230,12 @@ class Stack:
                 pvlayer = lnum+1 #+1 because of how tmm is written: always a layer above and below stack
             lnum += 1
         
-        print('pvlayer: ' + str(pvlayer))
-        print('lnum: ' +str(lnum)) 
-        print(any(pvs))
-        print(np.invert(any(pvs)))
+        #print('pvlayer: ' + str(pvlayer))
+        #print('lnum: ' +str(lnum)) 
+        #print(any(pvs))
+        #print(np.invert(any(pvs)))
         if np.invert(any(pvs)):
-            print('no PV')
+            #print('no PV')
             return np.zeros(np.shape(lams))
         
         thicks.append(inf)
