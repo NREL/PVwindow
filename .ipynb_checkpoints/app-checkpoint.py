@@ -72,6 +72,12 @@ Is = stack.Is(lambdas)/np.max(stack.Is(lambdas))
 LEF = stack.cieplf(lambdas)
 
 centeredstyle={'width':'10%','background-color':'red','position': 'absolute','top':'50%','-ms-transform':'translateY(-50%)','transform':'translateY(-50%)'}
+listingstyle = {'width':'50%','float':'left','padding':'6px 0','font-size':'16px'}
+
+#{'display':'inline-block',
+# 'font-size':'22px','width':'15%',
+# 'height':'36px',"verticalAlign": "center",
+# 'text-align':'center','float':'left'}
 
 app.layout = dbc.Container([
     dcc.Store(id="store"),
@@ -95,7 +101,7 @@ app.layout = dbc.Container([
              html.Div([
                  html.Span('Layer:',
                            style={'display':'inline-block',
-                                  'font-size':'22px','width':'20%',
+                                  'font-size':'22px','width':'15%',
                                   'height':'36px',"verticalAlign": "center",
                                   'text-align':'center','float':'left'}),
                  dbc.Button('+',
@@ -114,17 +120,18 @@ app.layout = dbc.Container([
                  style={'width':'20%','height':'36px','float':'left'}
                  ),
 
-                 html.Div(style={'width':'5%','height':'36px','float':'left'}),
+                 html.Div(style={'width':'2%','height':'36px','float':'left'}),
                  
                  dbc.Button('Solve',
                         id='button_solve',
-                        style={'width':'20%','height':'36px','float':'left'},
-                        color='secondary',n_clicks=0,className='me-1'),#style={'width':'60%'},class_name='d-grid col-4 mx-auto'
+                        style={'width':'15%','height':'36px','float':'left'},
+                        color='secondary',n_clicks=0,className='me-1'),
                  dbc.Button(
-                     dbc.Spinner(html.Div(id='waiting-for-stuff'),color='primary'),
+                     dbc.Spinner(html.Div(id='waiting-for-stuff'),color='primary',
+                                size='md',spinner_style={}),
                      color='transparent',
                      #disabled=True,
-                     style={'float':'left','width':'11%','height':'36px'},
+                     style={'float':'left','width':'15%','height':'36px'},
                      className='me-0'
                  )
              ],
@@ -133,8 +140,10 @@ app.layout = dbc.Container([
 
              html.Br(),
              dash_table.DataTable(
-                 columns = [{'name':'Material','id':'Material','presentation': 'dropdown'},
-                            {'name':'Thickness [μm]','id':'Thickness [μm]','presentation': 'input'},
+                 columns = [{'name':'Material','id':'Material',
+                             'presentation': 'dropdown'},
+                            {'name':'Thickness [μm]',
+                             'id':'Thickness [μm]','presentation': 'input'},
                             {'name':'PV','id':'PV','presentation': 'dropdown'}],
                  data=[{'Material':'nkLowFeGlass.csv',
                        'Thickness [μm]':4000,
@@ -158,7 +167,8 @@ app.layout = dbc.Container([
                         ]
                     }
                 },
-                style_cell={'fontSize':16, 'font-family':'Arial, Helvetica, sans-serif'},
+                style_cell={'fontSize':16, 
+                            'font-family':'Arial, Helvetica, sans-serif'},
                 #workaround so bootstrap formatting works with dropdowns... see https://github.com/plotly/dash-table/issues/221
                 css=[{"selector": ".Select-menu-outer", 
                       "rule": "display: block !important"}],
@@ -166,7 +176,8 @@ app.layout = dbc.Container([
              ),
             
         ],
-        style = {'float':'left','width':'50%','border-right-style':'none','border-width':'thin'},
+        style = {'float':'left','width':'50%',
+                 'border-right-style':'none','border-width':'thin'},
     ),
     #right side of interface
     dbc.Container(
@@ -174,7 +185,8 @@ app.layout = dbc.Container([
             html.H6('Analysis',className='display-6'),
             dbc.Tabs(
             [
-                dbc.Tab(label="A, R, T", tab_id="rat-tab",tab_style={"marginLeft": "auto"}),
+                dbc.Tab(label="A, R, T", tab_id="rat-tab",
+                        tab_style={"marginLeft": "auto"}),
                 dbc.Tab(label="Metrics", tab_id="metrics-tab"),
             ],
             id="tabs",
@@ -214,16 +226,33 @@ def render_tab_content(active_tab, data):
         elif active_tab == "metrics-tab":
             color = data['metric-stuff']['color']
             chromaticity = data['metric-stuff']['chromaticity']
+            VLT = data['metric-stuff']['VLT']
             
             thestuff = [
-                html.Span('Transmitted color: ',style={'display':'inline-block','font-size':'16px','width':'40%','height':'36px',"verticalAlign": "center",'text-align':'center','float':'left'}),
-                dbc.Button('  ',style={'width':'100px','height':'36px','background-color':color,'border-color':'black'}),
+
+                html.Span('Transmitted color: ',
+                          style=listingstyle),
+                dbc.Button('  ',
+                           style={'width':'20%','height':'36px',
+                                  'background-color':color,'border-color':'black'
+                                 }),
+
                 html.Br(),
-                html.Span('Transmitted chromaticity: ',style={'display':'inline-block','font-size':'16px','width':'40%','height':'36px',"verticalAlign": "center",'text-align':'center','float':'left'}),
-                dbc.Button('  ',style={'width':'100px','height':'36px','background-color':chromaticity,'border-color':'black'})
+                html.Span('Transmitted chromaticity: ',
+                          style=listingstyle),
+                dbc.Button('  ',
+                           style={'width':'20%','height':'36px',
+                                  'background-color':chromaticity,
+                                  'border-color':'black'}),
+                html.Br(),
+                html.Span('Visible light transmission: ',
+                          style=listingstyle),
+                dbc.Button(str(VLT)[:5],
+                           style={'width':'20%','height':'36px',
+                                  'color':'black',
+                                  'background-color':'transparent',
+                                  'border-color':'black'}),
             ]
-            
-                            
             
             return thestuff
             
@@ -390,10 +419,13 @@ def make_figures(n_clicks,data_from_table):
                  ticks='outside')
 
     #stack.self_summary()
-    colorstuff = stack.get_transmitted_color(lambdas,i_ang)
-    #print(colorstuff)
+    metrics = stack.get_transmitted_color(lambdas,i_ang)
+    #print(metrics)
+    
+    VLT = stack.get_visible_light_transmission(lambdas,i_ang)
+    metrics['VLT']=VLT
         
-    return {'rat-fig':fig,'metric-stuff':colorstuff},None
+    return {'rat-fig':fig,'metric-stuff':metrics},None
 
 
 if __name__ == '__main__':
