@@ -15,10 +15,6 @@ import wpv
 import os
 #import plotly.express as px
 
-
-
-
-
 matmap = {'Low Fe Glass':'nkLowFeGlass.csv',
           'FTO':'nkFTO.csv',
           'MAPI':'nkMAPI.csv',
@@ -93,52 +89,107 @@ app.layout = dbc.Container([
     ]),
     # left side of interface  
     dbc.Container(
-        [
-             #html.H1('I am hungry'),
-             html.H6('Device Stack',className='display-6'),#,class_name="me-md-1"
-             
-             #button row
-             html.Div([
-                 html.Span('Layer:',
-                           style={'display':'inline-block',
-                                  'font-size':'22px','width':'15%',
-                                  'height':'36px',"verticalAlign": "center",
-                                  'text-align':'center','float':'left'}),
-                 dbc.Button('+',
-                            color="primary",
-                            id='button_add',
-                            style={'width':'10%','height':'36px','float':'left'},
-                            n_clicks=0),
-                 dbc.ButtonGroup([
-                     dbc.Button('↑',
-                                outline=True,color="primary",
-                                id='button_up',n_clicks=0),
-                     dbc.Button('↓',
-                                outline=True,color="primary",
-                                id='button_down',n_clicks=0),
-                     ],
-                 style={'width':'20%','height':'36px','float':'left'}
-                 ),
+        [            
+            html.H2('Device Stack',className=''),#,class_name="me-md-1"
 
-                 html.Div(style={'width':'2%','height':'36px','float':'left'}),
-                 
-                 dbc.Button('Solve',
-                        id='button_solve',
-                        style={'width':'15%','height':'36px','float':'left'},
-                        color='secondary',n_clicks=0,className='me-1'),
-                 dbc.Button(
-                     dbc.Spinner(html.Div(id='waiting-for-stuff'),color='primary',
-                                size='md',spinner_style={}),
-                     color='transparent',
-                     #disabled=True,
-                     style={'float':'left','width':'15%','height':'36px'},
-                     className='me-0'
-                 )
-             ],
-                 style={'position':'relative','float':'left','width':'100%'}
-             ),
+            html.Div(
+                    [
+                        dbc.Row(
+                            dbc.Col(html.H4("Parameters:"))
+                        ),
+                        #First input row
+                        dbc.Row(
+                            [
+                                dbc.Col(html.Div(["R",html.Sub('series'), ' [Ω]']),width={'size':3,'offset':1}),
+                                dbc.Col(dbc.Input(id='Rs_in'),width={'size':2,'offset':0}),
+                                dbc.Col(html.Div(["R",html.Sub('shunt'), ' [Ω]']),width={'size':3,'offset':0}),
+                                dbc.Col(dbc.Input(id='Rsh_in'),width={'size':2,'offset':0}),
+                            ],
+                            justify='start',
+                            align='center'
+                        ),
+                        #2nd input row
+                        dbc.Row(
+                            [
+                                dbc.Col(html.Div(["U",html.Sub("outside"), ' [Wm',html.Sup('-2'),'K',html.Sup('-1'),']']),
+                                        width={'size':3,'offset':1}),
+                                dbc.Col(dbc.Input(id='Uout_in'),width={'size':2,'offset':0}),
+                                dbc.Col(html.Div(["U",html.Sub("inside"), ' [Wm',html.Sup('-2'),'K',html.Sup('-1'),']']),
+                                        width={'size':3,'offset':0}),
+                                dbc.Col(dbc.Input(id='Uin_in'),width={'size':2,'offset':0}),
+                            ],
+                            justify='start',
+                            align='center'
+                        ),
+                        #3rd input row
+                        dbc.Row(
+                            [
+                                dbc.Col(html.Div(["T",html.Sub("outside"), ' [℃]']),width={'size':3,'offset':1}),
+                                dbc.Col(dbc.Input(id='Tout_in'),width={'size':2,'offset':0}),
+                                dbc.Col(html.Div(["T",html.Sub("inside"), ' [℃]']),width={'size':3,'offset':0}),
+                                dbc.Col(dbc.Input(id='Tin_in'),width={'size':2,'offset':0}),
+                            ],
+                            justify='start',
+                            align='center'
+                        ),
+                        #4th input row
+                        dbc.Row(
+                            [
+                                dbc.Col(html.Div(["θ",html.Sub("inc"), ' [deg]']),width={'size':3,'offset':1}),
+                                dbc.Col(dbc.Input(id='theta_in'),width={'size':2,'offset':0}),
+                            ],
+                            justify='start',
+                            align='center'
+                        ),
+                        dbc.Row(
+                            dbc.Col(html.H4("Layers:",className='')),
+                        ),
+                        dbc.Row(
+                            [
+                                
+                                dbc.Col(dbc.Button('+',
+                                                color="primary",
+                                                id='button_add',
+                                                n_clicks=0,
+                                                className='col-12'),
+                                        width={'size':2,'offset':1}
+                                       ),
+                                dbc.Col(dbc.ButtonGroup([
+                                     dbc.Button('↑',
+                                                outline=True,color="primary",
+                                                id='button_up',n_clicks=0),
+                                     dbc.Button('↓',
+                                                outline=True,color="primary",
+                                                id='button_down',n_clicks=0),
+                                     ],
+                                 className='col-12'
+                                 ),width={'size':3,'offset':0})
+                                
+                            ],
+                            align='center',#style={'font-size':'18px'},
+                        ),
+                        html.Br(),
+                        dbc.Row(
+                                [
+                                    dbc.Col(dbc.Button('Solve',
+                                                   id='button_solve',
+                                                   color='secondary',
+                                                   n_clicks=0,
+                                                   className='col-12'),
+                                           width={'size':6,'offset':2}
+                                           ),
+                                    dbc.Col(
+                                                dbc.Spinner(html.Div(id='waiting-for-stuff',className='m-1'),color='primary'),
+
+                                           )
+                                ]
+                        )
+                        
+                    ]
+                ),
 
              html.Br(),
+             #html.H1(''),
              dash_table.DataTable(
                  columns = [{'name':'Material','id':'Material',
                              'presentation': 'dropdown'},
@@ -167,8 +218,8 @@ app.layout = dbc.Container([
                         ]
                     }
                 },
-                style_cell={'fontSize':16, 
-                            'font-family':'Arial, Helvetica, sans-serif'},
+                style_cell={'fontSize':16}, 
+                            #'font-family':'Arial, Helvetica, sans-serif'},
                 #workaround so bootstrap formatting works with dropdowns... see https://github.com/plotly/dash-table/issues/221
                 css=[{"selector": ".Select-menu-outer", 
                       "rule": "display: block !important"}],
@@ -182,11 +233,11 @@ app.layout = dbc.Container([
     #right side of interface
     dbc.Container(
         [
-            html.H6('Analysis',className='display-6'),
+            html.H2('Analysis'),#,className='display-6'),
             dbc.Tabs(
             [
-                dbc.Tab(label="A, R, T", tab_id="rat-tab",
-                        tab_style={"marginLeft": "auto"}),
+                dbc.Tab(label="A, R, T", tab_id="rat-tab"),#,
+                        #tab_style={"marginLeft": "auto"}),
                 dbc.Tab(label="Metrics", tab_id="metrics-tab"),
             ],
             id="tabs",
@@ -227,31 +278,95 @@ def render_tab_content(active_tab, data):
             color = data['metric-stuff']['color']
             chromaticity = data['metric-stuff']['chromaticity']
             VLT = data['metric-stuff']['VLT']
+            PCE = data['metric-stuff']['PCE']
+            SHGC = data['metric-stuff']['SHGC']
+            Tcell = data['metric-stuff']['Tcell']
             
             thestuff = [
+                dbc.Row(
+                            [
+                                dbc.Col(html.Div("Transmitted color:",),width={'size':5,'offset':0}),
+                                dbc.Col(dbc.Button('   ',
+                                                   className='p-3 col-12',
+                                                   style={'background-color':color,'border-color':'black'}
+                                                  ),
+                                        width={'size':2,'offset':0}
+                                       ),
 
-                html.Span('Transmitted color: ',
-                          style=listingstyle),
-                dbc.Button('  ',
-                           style={'width':'20%','height':'36px',
-                                  'background-color':color,'border-color':'black'
-                                 }),
+                            ],
+                            justify='start',
+                            align='center'
+                        ),
+                dbc.Row(
+                            [
+                                dbc.Col(html.Div("Transmitted chromaticity:",),width={'size':5,'offset':0}),
+                                dbc.Col(dbc.Button('   ',
+                                                   className='p-3 col-12',
+                                                   style={'background-color':chromaticity,'border-color':'black'}
+                                                  ),
+                                        width={'size':2,'offset':0}
+                                       ),
 
-                html.Br(),
-                html.Span('Transmitted chromaticity: ',
-                          style=listingstyle),
-                dbc.Button('  ',
-                           style={'width':'20%','height':'36px',
-                                  'background-color':chromaticity,
-                                  'border-color':'black'}),
-                html.Br(),
-                html.Span('Visible light transmission: ',
-                          style=listingstyle),
-                dbc.Button(str(VLT)[:5],
-                           style={'width':'20%','height':'36px',
-                                  'color':'black',
-                                  'background-color':'transparent',
-                                  'border-color':'black'}),
+                            ],
+                            justify='start',
+                            align='center'
+                        ),
+                dbc.Row(
+                            [
+                                dbc.Col(html.Div("Visible light transmission:",),width={'size':5,'offset':0}),
+                                dbc.Col(dbc.Button(str(VLT)[:5],
+                                                   className='p-1 col-12',
+                                                   style={'color':'black','background-color':'transparent','border-color':'black'}
+                                                  ),
+                                        width={'size':2,'offset':0}
+                                       ),
+
+                            ],
+                            justify='start',
+                            align='center'
+                        ),
+                dbc.Row(
+                            [
+                                dbc.Col(html.Div("Power conversion efficiency:",),width={'size':5,'offset':0}),
+                                dbc.Col(dbc.Button(str(PCE)[:5],
+                                                   className='p-1 col-12',
+                                                   style={'color':'black','background-color':'transparent','border-color':'black'}
+                                                  ),
+                                        width={'size':2,'offset':0}
+                                       ),
+
+                            ],
+                            justify='start',
+                            align='center'
+                        ),
+                dbc.Row(
+                            [
+                                dbc.Col(html.Div("Solar heat gain coefficient:",),width={'size':5,'offset':0}),
+                                dbc.Col(dbc.Button(str(SHGC)[:5],
+                                                   className='p-1 col-12',
+                                                   style={'color':'black','background-color':'transparent','border-color':'black'}
+                                                  ),
+                                        width={'size':2,'offset':0}
+                                       ),
+
+                            ],
+                            justify='start',
+                            align='center'
+                        ),
+                dbc.Row(
+                            [
+                                dbc.Col(html.Div("Cell Temperature:",),width={'size':5,'offset':0}),
+                                dbc.Col(dbc.Button([str(Tcell)[:5],' ℃'],
+                                                   className='p-1 col-12',
+                                                   style={'color':'black','background-color':'transparent','border-color':'black'}
+                                                  ),
+                                        width={'size':2,'offset':0}
+                                       ),
+
+                            ],
+                            justify='start',
+                            align='center'
+                        ),
             ]
             
             return thestuff
@@ -330,9 +445,17 @@ Now adding outputs for analysis tab: color, chromaticity, PCE, SHGC...
     Output('waiting-for-stuff','children'),
     Input('button_solve','n_clicks'),
     State('layer_table', 'data'),
+    State('Rs_in','value'),
+    State('Rsh_in','value'),
+    State('Uin_in','value'),
+    State('Uout_in','value'),
+    State('Tin_in','value'),
+    State('Tout_in','value'),
+    State('theta_in','value'),
 )
-def make_figures(n_clicks,data_from_table):
+def make_figures(n_clicks,data_from_table,Rs,Rsh,Uin,Uout,Tin,Tout,theta):
         
+    
     fig = go.Figure()
     
     fig.add_trace(
@@ -399,7 +522,7 @@ def make_figures(n_clicks,data_from_table):
             x=1
         ),
         font=dict(
-            family = "Arial, Helvetica, sans-serif",
+            #family = "Open Sans",
             size=14,
         ),
         plot_bgcolor = 'rgba(0,0,0,0)',
@@ -422,8 +545,73 @@ def make_figures(n_clicks,data_from_table):
     metrics = stack.get_transmitted_color(lambdas,i_ang)
     #print(metrics)
     
+    ready = []
+    if Rsh:
+        print('Rsh from input: ' + Rsh)   
+        ready.append(True)
+    else:
+        ready.append(False)
+    if Rs:
+        print('Rs from input: ' + Rs)    
+        ready.append(True)
+    else:
+        ready.append(False)
+        
+    if Uin:
+        print('Uin from input: ' + Uin)    
+        ready.append(True)
+    else:
+        ready.append(False)
+        
+    if Uout:
+        print('Uout from input: ' + Uout)
+        ready.append(True)
+    else:
+        ready.append(False)
+        
+    if Tin:
+        print('Tin from input: ' + Tin)
+        ready.append(True)
+    else:
+        ready.append(False)
+        
+    if Tout:
+        print('Tout from input: ' + Tout)
+        print(type(Tout))
+        print(type(float(Tout)))
+        ready.append(True)
+    else:
+        ready.append(False)
+        
+    if theta:
+        print('theta from input: ' + theta)
+        ready.append(True)
+    else:
+        ready.append(False)
+        
+    
+    if all(ready):
+        print('let us go')
+        thegoods = wpv.get_performance_characteristics(stack,float(Tin),float(Tout),float(Uin),float(Uout),
+                                                        float(Rs),float(Rsh),float(theta))
+        metrics['PCE']=thegoods['PCE']
+        metrics['SHGC']=thegoods['SHGC']
+        metrics['Tcell']=thegoods['Tcell']
+        #thegoods = wpv.get_performance_characteristics_old(stack,1,float(Tin),float(Tout),float(Uin),float(Uout),
+        #                                                float(Rs),float(Rsh),1,float(theta))
+        print('did it')
+        print(thegoods)
+                                                    
+    else:
+        metrics['PCE']='0.0'
+        metrics['SHGC']='N/A'
+        metrics['Tcell']='N/A'
+        print('more inputs needed')
+    
     VLT = stack.get_visible_light_transmission(lambdas,i_ang)
     metrics['VLT']=VLT
+    print(metrics)
+                            
         
     return {'rat-fig':fig,'metric-stuff':metrics},None
 

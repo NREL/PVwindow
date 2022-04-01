@@ -354,6 +354,33 @@ class Stack:
         return False
     
     
+    def get_performance_characteristics(stack,eta,Ti,To,Ui,Uo,Rs,Rsh,AbsorberLayer,Angle):
+    
+        layers = stack.layers
+
+        spectra = Spectra(layers ,AbsorberLayer,Angle)
+        AbsByAbsorbers = spectra['AbsByAbsorbers']
+        Ts = spectra['Ts']
+        Rfs = spectra['Rfs']
+        Rbs = spectra['Rbs']
+        As = spectra['As']
+        sanities = spectra['Total']
+        Absorbed = GiveEInterp(AbsByAbsorbers)
+        VLTcalc =  stack.get_visible_light_transmission(lams,Angle) #cvs.getVLT(Ts,lams)#VLT(layers)
+        Tcell = TcellCalc(As,eta, Ti,To, Absorbed, Ui, Uo, Rs, Rsh)
+        #Absorbed = tpc.GiveEInterp(tpc.Spectra(tpc.GiveLayers(Thickness, Materials),4)['AbsByAbsorbers'])
+        data = GiveIVData(eta, Absorbed, Rs, Rsh,Tcell, n = 1, Ns = 1)
+        Isc = data['i_sc']
+        Voc = data['v_oc']
+        Imp = data['i_mp']
+        Vmp = data['v_mp']
+        Pmp = data['p_mp']
+        SHGCcalc = SHGC(Ts, Ti, To, Tcell, Ui)
+        PCE = max_efficiency(eta,Absorbed,Tcell, Rs, Rsh)
+
+        #print('PCE = ',PCE,'VLT = ', VLTcalc, 'SHGC = ',SHGCcalc, 'Tcell = ',Tcell)#,'time to calculate PCE from scratch in seconds = ', TimePCE, 'Time to run optimizer in minutes = ',TimeOptimize/60)
+        return {'PCE':PCE, 'VLT':VLTcalc, 'SHGC':SHGCcalc, 'Tcell':Tcell,'Isc':Isc, 'Voc': Voc, 'Imp': Imp, 'Vmp': Vmp,'Pmp': Pmp}
+    
     def self_summary(self):
         
         print('=======================================')
@@ -409,127 +436,8 @@ class Stack:
 def VLTSpectrum(layers):
     return Stack(layers)
 
-'''Calculates Spectra Based on the layers of the cell
-AbsorberLayer is an integer giving the position of the PV layer in the stack. Currently supports 1 PV layer'''
-def Spectra(layers, AbsorberLayer, inc_angle):
-    thicks = [inf]
-    iorcs = ['i']
-    for layer in layers:
-        thicks.append(layer.d)
-        iorcs.append(layer.i_or_c)
-    thicks.append(inf)
-    iorcs.append('i')
-    
-       
-    thicks_bw = thicks[::-1]
-    iorcs_bw = iorcs[::-1]
-
-    Ts = []
-    Rfs = []
-    Rbs = []
-    AbsByAbsorbers = []
-    #EQEs2 = []
-    #IREQEs = []
-
-
-    layerchoice = AbsorberLayer 
-    #layerchoice2 = 5
-
-    for lam in lams:
-
-        nks = [1]
-        for layer in layers:
-            nks.append(layer.nk(lam))
-        nks.append(1)
-        
-        nks_bw = nks[::-1]
-        
-        front_spol = tmm.inc_tmm('s',nks,thicks,iorcs,inc_angle,lam)
-        front_ppol = tmm.inc_tmm('p',nks,thicks,iorcs,inc_angle,lam)
-        back_spol = tmm.inc_tmm('s',nks_bw,thicks_bw,iorcs_bw,inc_angle,lam)
-        back_ppol = tmm.inc_tmm('p',nks_bw,thicks_bw,iorcs_bw,inc_angle,lam)
-    
-        AbsByAbsorber_spol = tmm.inc_absorp_in_each_layer(front_spol)[layerchoice]
-        AbsByAbsorber_ppol = tmm.inc_absorp_in_each_layer(front_ppol)[layerchoice]
-    
-        AbsByAbsorbers.append( (AbsByAbsorber_spol + AbsByAbsorber_ppol) / 2. )
-    
-        # EQE_spol2 = tmm.inc_absorp_in_each_layer(front_spol)[layerchoice2]
-        # EQE_ppol2 = tmm.inc_absorp_in_each_layer(front_ppol)[layerchoice2]
-    
-        # EQEs2.append( (EQE_spol2 + EQE_ppol2) / 2. )
-    
-        Rfs.append( (front_spol['R']+front_ppol['R']) / 2.)
-        Rbs.append( (back_spol['R']+back_ppol['R']) / 2.)
-        Ts.append( (front_spol['T']+front_ppol['T']) / 2. )
-
-
-    Ts = array(Ts)
-    Rfs = array(Rfs)
-    Rbs = array(Rbs)
-    As = 1-Ts-Rfs
-    sanities = Ts+Rfs+As
-
-    AbsByAbsorbers = array(AbsByAbsorbers)
-    Spectra = {'AbsByAbsorbers':AbsByAbsorbers, 'Ts':Ts,'Rfs':Rfs,'Rbs':Rbs,'As':As,'Total':sanities}
-    return Spectra
-
 
 ## other stuff on color
-
-
-'''This code is all based on the ColorPy package. Check the online documentation
-for more info and more functions if needed'''
-
-
-'''Gives color swatches of reflected and transmitted light based on input of intensity of spectrum'''
-def GiveColorSwatch(T, Rf):
-    lamsnm = linspace(0.3,2.5,num=num_lams) #um
-    lamsnm*=1000
-    spectrumT = vstack((lamsnm, T)).T
-    spectrumRf = vstack((lamsnm, Rf)).T
-    plots.spectrum_plot (spectrumRf, 'Rf', 'Rf_Color', 'Wavelength ($nm$)', 'Intensity')
-    plt.show()
-    plots.spectrum_plot (spectrumT, 'T', 'T_Color', 'Wavelength ($nm$)', 'Intensity')
-    plt.show()
-    return
-
-
-'''Converts a spectrum (nm vs intenisty) into ciexyz coordinates'''
-def give_xy(spectrum):
-    xyz = ciexyz.xyz_from_spectrum(spectrum)
-    xyz1 = colormodels.xyz_normalize (xyz)
-    xyz2 = xyz1[0:2]
-    #print(xyz2)
-    return(xyz2)
- 
-'''Plots color as points on the CIE colorchart based on intensity of spectra
-T and Rf are arrays of intensity for transmission and front reflection'''
-def plot_xy_on_fin(T, Rf):
-    lamsnm = array(lams)
-    lamsnm*=1000
-    Tspectrum = vstack((lamsnm, T)).T
-    Rfspectrum = vstack((lamsnm, Rf)).T
-    xyT = give_xy(Tspectrum)
-    xyRf = give_xy(Rfspectrum)
-    plots.shark_fin_plot()
-    #print(xyT[0])
-    plt.plot(xyT[0], xyT[1], 'ro',color = 'black', label = 'T')
-    plt.plot(xyRf[0], xyRf[1], 'ro',color = 'black', label = 'Rf')
-    plt.annotate('T', (xyT[0], xyT[1]))
-    plt.annotate('Rf', (xyRf[0], xyRf[1]))
-    plt.show()
-    return
-
-'''I give a color swatch for any spectrum. Spectrum is a list of intensities and wavelength
- is the corresponding list of wavelgnths in nm. name is the title of the sample and must be a string'''
-def GiveSingleColorSwatch(spectrum, wavelength, name):
-    spectrumT = vstack((wavelength, spectrum)).T
-    plots.spectrum_plot (spectrumT, name, 'T_Color', 'Wavelength ($nm$)', 'Intensity')
-    plt.show()
-    return
-
-
 
 
 ## stuff on PCE
@@ -789,19 +697,72 @@ def GiveImportantInfo(Thickness, Materials,eta,Ti,To,Ui,Uo,Rs,Rsh,AbsorberLayer,
     return {'PCE':PCE, 'VLT':VLTcalc, 'SHGC':SHGCcalc, 'Tcell':Tcell,'Isc':Isc, 'Voc': Voc, 'Imp': Imp, 'Vmp': Vmp,'Pmp': Pmp}
 
 # Vince hacks some stuff from Adam
-
-def get_performance_characteristics(stack,eta,Ti,To,Ui,Uo,Rs,Rsh,AbsorberLayer,Angle):
+'''
+This needs work. To do:
+1) It should be a method within stack.
+2) Figure out a better way to do the interpolated curve for spectrum as a function of photon energy
+3) Important: fix T_cell calculation. I don't trust it.
+'''
+def get_performance_characteristics(stack,Ti,To,Ui,Uo,Rs,Rsh,Angle):
     
     layers = stack.layers
     
-    spectra = Spectra(layers ,AbsorberLayer,Angle)
-    AbsByAbsorbers = spectra['AbsByAbsorbers']
-    Ts = spectra['Ts']
-    Rfs = spectra['Rfs']
-    Rbs = spectra['Rbs']
-    As = spectra['As']
-    sanities = spectra['Total']
+    eta = 1
+    
+    [Refs,As,Ts] = stack.get_specular_RAT(lams,Angle)
+    Refs=np.array(Refs)
+    As=np.array(As)
+    Ts=np.array(Ts)
+    #spectra = Spectra(layers ,AbsorberLayer,Angle)
+    #AbsByAbsorbers = spectra['AbsByAbsorbers']
+    AbsByAbsorbers = stack.get_specular_PV_abs(lams, Angle)
+    AbsByAbsorbers = np.array(AbsByAbsorbers)
     Absorbed = GiveEInterp(AbsByAbsorbers)
+    
+    #Tcell = TcellCalc(As,eta, Ti,To, Absorbed, Ui, Uo, Rs, Rsh)
+    AbsTotal = GiveEInterp(As)
+    
+    Qabs = GiveQ(AbsTotal)
+    
+    def tsolve(Tcell):
+
+        return (Qabs - Give_Pmp(eta,Absorbed,Rs,Rsh, Tcell) + Ui*Ti + Uo*To)/(Ui + Uo)-Tcell
+    
+    Tcell= fsolve(tsolve, 300)[0]
+
+    #print(Tcell)
+    
+    # I don't trust the followinc calculation of the SHGC at all. There is no way it is not a function of Uo
+    SHGCcalc = SHGC(Ts, Ti, To, Tcell, Ui)
+    PCE = max_efficiency(eta,Absorbed,Tcell, Rs, Rsh)
+
+    #print('PCE = ',PCE,'VLT = ', VLTcalc, 'SHGC = ',SHGCcalc, 'Tcell = ',Tcell)#,'time to calculate PCE from scratch in seconds = ', TimePCE, 'Time to run optimizer in minutes = ',TimeOptimize/60)
+    return {'PCE':PCE,'SHGC':SHGCcalc,'Tcell':Tcell}
+
+def get_performance_characteristics_old(stack,eta,Ti,To,Ui,Uo,Rs,Rsh,AbsorberLayer,Angle):
+    
+    layers = stack.layers
+    
+    
+    [Rs,As,Ts] = stack.get_specular_RAT(lams,Angle)
+    
+    Rs=np.array(Rs)
+    As=np.array(As)
+    Ts=np.array(Ts)
+    
+    #spectra = Spectra(layers ,AbsorberLayer,Angle)
+    #AbsByAbsorbers = spectra['AbsByAbsorbers']
+    AbsByAbsorbers = stack.get_specular_PV_abs(lams, Angle)
+    #spectra = Spectra(layers ,AbsorberLayer,Angle)
+    #AbsByAbsorbers = spectra['AbsByAbsorbers']
+    #Ts = spectra['Ts']
+    #Rfs = spectra['Rfs']
+    #Rbs = spectra['Rbs']
+    #As = spectra['As']
+    #sanities = spectra['Total']
+    Absorbed = GiveEInterp(np.array(AbsByAbsorbers))
+    print(Absorbed)
+    moop
     VLTcalc =  stack.get_visible_light_transmission(lams,Angle) #cvs.getVLT(Ts,lams)#VLT(layers)
     Tcell = TcellCalc(As,eta, Ti,To, Absorbed, Ui, Uo, Rs, Rsh)
     #Absorbed = tpc.GiveEInterp(tpc.Spectra(tpc.GiveLayers(Thickness, Materials),4)['AbsByAbsorbers'])

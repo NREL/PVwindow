@@ -42,7 +42,7 @@ pvabs = stack.get_specular_PV_abs(lams, iang)
 
 [Rfs,As,Ts] = stack.get_specular_RAT(lams,iang)
 
-'''
+
 plt.figure()
 plt.plot(lams,Rfs,label=r"$R$")
 plt.plot(lams,As,label=r"$A$")
@@ -53,7 +53,7 @@ plt.xlabel(r"$\lambda$, micron")
 plt.ylabel(r"R, A, or T")
 plt.legend(loc='upper right')
 #plt.show()
-'''
+
 
 eta = 1 #electron-hole pair extraction efficienc
 Ti = 298 #inside temperature
@@ -65,10 +65,14 @@ Rsh = 1e5 #shunt resistence
 AbsorberLayer = 3 #which layer is PV absorber layer
 
 
-#stuff = wpv.get_performance_characteristics(stack,eta,Ti,To,Ui,Uo,Rs,Rsh,AbsorberLayer,iang)
+#stuff = wpv.get_performance_characteristics_old(stack,eta,Ti,To,Ui,Uo,Rs,Rsh,AbsorberLayer,iang)
 
-#print(stuff)
+stuff = wpv.get_performance_characteristics(stack,Ti,To,Ui,Uo,Rs,Rsh,iang)
 
+
+print(stuff)
+
+'''
 nmlams = lams*1000
 #d = {'wavelength':nmlams,'Ts':Ts}
 df_spec = pd.Series(data=Ts,index=nmlams)
@@ -128,3 +132,4 @@ hidden = stack.get_transmitted_color(lams,iang)
 print(hidden)
 #hexcol = convert(sd,'Spectral Distribution','Hexadecimal')
 #print(hexcol)
+'''
