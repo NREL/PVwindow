@@ -592,11 +592,11 @@ def make_figures(n_clicks,data_from_table,Rs,Rsh,Uin,Uout,Tin,Tout,theta):
     
     if all(ready):
         print('let us go')
-        thegoods = wpv.get_performance_characteristics(stack,float(Tin),float(Tout),float(Uin),float(Uout),
+        thegoods = wpv.get_performance_characteristics(stack,float(Tin)+273.15,float(Tout)+273.15,float(Uin),float(Uout),
                                                         float(Rs),float(Rsh),float(theta))
         metrics['PCE']=thegoods['PCE']
         metrics['SHGC']=thegoods['SHGC']
-        metrics['Tcell']=thegoods['Tcell']
+        metrics['Tcell']=thegoods['Tcell']-273.15
         #thegoods = wpv.get_performance_characteristics_old(stack,1,float(Tin),float(Tout),float(Uin),float(Uout),
         #                                                float(Rs),float(Rsh),1,float(theta))
         print('did it')
